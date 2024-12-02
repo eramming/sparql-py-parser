@@ -1,4 +1,4 @@
-
+from tokens import QueryTerm
 
 class Token:
     def __init__(self, term: QueryTerm, content: str = None) -> None:

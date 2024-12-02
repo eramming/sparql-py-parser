@@ -1,4 +1,4 @@
-from tokens import TokenLiteral, Token
+from tokens import QueryTerm, Token
 from . import Query, SelectQuery, Prologue, LookaheadQueue
 
 class QueryParser:
@@ -15,35 +15,43 @@ class QueryParser:
         prologue: Prologue = self.prologue(tokens, Prologue())
         select_query: SelectQuery = self.select_query(tokens)
         next_tok: Token = tokens.get(block=False)
-        if next_tok is TokenLiteral.EOF:
+        if next_tok.term is QueryTerm.EOF:
             return Query(prologue, select_query)
         else:
             raise ValueError(f"Expected EOF but got {next_tok.value}")
 
     ''' Prologue ::= (BaseDecl | PrefixDecl)* '''
     def prologue(self, tokens: LookaheadQueue[Token], prologue: Prologue) -> Prologue:
-        next_tok: Token = tokens.get(block=False)
-        if next_tok is not TokenLiteral.BASE or next_tok is not TokenLiteral.PREFIX:
-            raise ValueError(f"Expected {TokenLiteral.BASE.value} or {TokenLiteral.PREFIX.value} but got {next_tok}")
-        elif next_tok is TokenLiteral.PREFIX:
-            # Validate that the following token is an iri
-            prologue.set_prefix()
-        else: # if BASE:
-            assert tokens.get(block=False) is Token.COLON
-            iri_tok: Token = tokens.get(block=False)
-            assert instanceof(
-            # Validate that the following token is an iri
-            prologue.set_base()
+        next_tok: Token = tokens.lookahead()
+
+        if next_tok.term is QueryTerm.PREFIX:
+            self.prefix_decl(tokens, prologue)
+        elif next_tok.term is QueryTerm.BASE:
+            self.base_decl(tokens, prologue)
+        else:
+            raise ValueError(f"Expected {QueryTerm.BASE.value} or {QueryTerm.PREFIX.value} but got {next_tok.term.value}")
+        
         lookahead = tokens.lookahead()
-        if lookahead is Token.BASE or lookahead is Token.PREFIX:
+        if lookahead is QueryTerm.BASE or lookahead is QueryTerm.PREFIX:
             return self.prologue(tokens, prologue)
         return prologue
+
+    ''' BaseDecl ::= 'BASE' IRIREF '''
+    def base_decl(self, tokens: LookaheadQueue[Token], prologue: Prologue) -> None:
+        assert tokens.get(block=False).term is QueryTerm.BASE
+        iri_ref: Token = tokens.get(block=False)
+        assert iri_ref.term is QueryTerm.IRI_REF
+        prologue.set_base(iri_ref.content)
+
+    ''' PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF '''
+    def prefix_decl(self, tokens: LookaheadQueue[Token], prologue: Prologue) -> None:
+        
 
     ''' SelectQuery ::= SelectClause
                     ::= DatasetClause*
                     ::= WhereClause
     '''
-    def select_query(self, tokens: Queue[Token]) -> SelectQuery:
+    def select_query(self, tokens: LookaheadQueue[Token]) -> SelectQuery:
         raise NotImplementedError()
 
 # class ParseResult:
