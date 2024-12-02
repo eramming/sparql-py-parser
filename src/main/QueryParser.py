@@ -1,17 +1,17 @@
-from tokens import QueryTerm, Token
-from . import Query, SelectQuery, Prologue, LookaheadQueue
+from main.tokens import QueryTerm, Token
+from main import Query, SelectQuery, Prologue, LookaheadQueue
 
 class QueryParser:
 
     def __init__(self) -> None:
         pass
     
-    def parse(self, tokens: LookaheadQueue[Token]) -> Query:
+    def parse(self, tokens: LookaheadQueue) -> Query:
         return self.query(tokens)
 
     ''' Query ::= Prologue
               ::= SelectQuery '''
-    def query(self, tokens: LookaheadQueue[Token]) -> Query:
+    def query(self, tokens: LookaheadQueue) -> Query:
         prologue: Prologue = self.prologue(tokens, Prologue())
         select_query: SelectQuery = self.select_query(tokens)
         next_tok: Token = tokens.get(block=False)
@@ -21,7 +21,7 @@ class QueryParser:
             raise ValueError(f"Expected EOF but got {next_tok.value}")
 
     ''' Prologue ::= (BaseDecl | PrefixDecl)* '''
-    def prologue(self, tokens: LookaheadQueue[Token], prologue: Prologue) -> Prologue:
+    def prologue(self, tokens: LookaheadQueue, prologue: Prologue) -> Prologue:
         next_tok: Token = tokens.lookahead()
 
         if next_tok.term is QueryTerm.PREFIX:
@@ -37,21 +37,24 @@ class QueryParser:
         return prologue
 
     ''' BaseDecl ::= 'BASE' IRIREF '''
-    def base_decl(self, tokens: LookaheadQueue[Token], prologue: Prologue) -> None:
+    def base_decl(self, tokens: LookaheadQueue, prologue: Prologue) -> None:
         assert tokens.get(block=False).term is QueryTerm.BASE
         iri_ref: Token = tokens.get(block=False)
         assert iri_ref.term is QueryTerm.IRI_REF
         prologue.set_base(iri_ref.content)
 
     ''' PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF '''
-    def prefix_decl(self, tokens: LookaheadQueue[Token], prologue: Prologue) -> None:
-        
+    def prefix_decl(self, tokens: LookaheadQueue, prologue: Prologue) -> None:
+        assert tokens.get(block=False).term is QueryTerm.PREFIX
+        prefix_name: Token = tokens.get(block=False)
+        assert prefix_name.term is QueryTerm.PREFIX_NAME
+
 
     ''' SelectQuery ::= SelectClause
                     ::= DatasetClause*
                     ::= WhereClause
     '''
-    def select_query(self, tokens: LookaheadQueue[Token]) -> SelectQuery:
+    def select_query(self, tokens: LookaheadQueue) -> SelectQuery:
         raise NotImplementedError()
 
 # class ParseResult:

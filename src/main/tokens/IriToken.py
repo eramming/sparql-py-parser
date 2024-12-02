@@ -1,5 +1,5 @@
 
-from . import Token
+from main.tokens import Token
 import re
 
 class IriToken(Token):

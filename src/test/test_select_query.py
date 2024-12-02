@@ -1,5 +1,5 @@
-from src.main.python import QueryParser, Query
-from src.main.python.tokens import Tokenizer
+from src.main import QueryParser, Query
+from src.main.tokens import Tokenizer
 
 def test_select_all() -> None:
     parser: QueryParser = QueryParser()

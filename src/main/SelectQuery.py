@@ -1,6 +1,5 @@
-from SelectClause import SelectClause
-from DatasetClause import DatasetClause
-from WhereClause import WhereClause
+from main import SelectClause, DatasetClause, WhereClause
+
 
 class SelectQuery:
     
@@ -8,5 +7,4 @@ class SelectQuery:
         self.select_clause: SelectClause = None
         self.dataset_clause: DatasetClause = None
         self.where_clause: WhereClause = None
-    
     

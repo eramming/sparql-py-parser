@@ -1,9 +1,9 @@
 from queue import Queue
 import argparse
-from tokens import Tokenizer, Token
-from . import QueryParser, Query
+from main.tokens import Tokenizer, Token
+from main import QueryParser, Query
 
-def main():
+def app():
     parser = argparse.ArgumentParser(prog="Sparql Py Parser",
                                      description="Builds a class-based representation of a sparql query.")
     parser.add_argument("--filepath", type=str, default="../resources/select_alerts.rq")
@@ -21,4 +21,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    app()

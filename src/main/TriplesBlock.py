@@ -1,4 +1,4 @@
-from GroupGraphPattern import GroupGraphPattern
+from main import GroupGraphPattern
 
 class TriplesBlock(GroupGraphPattern):
 

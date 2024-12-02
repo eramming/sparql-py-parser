@@ -1,4 +1,4 @@
-from tokens import QueryTerm
+from main.tokens import QueryTerm
 
 class Validators:
 

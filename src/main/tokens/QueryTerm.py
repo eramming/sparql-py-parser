@@ -7,7 +7,7 @@ class QueryTerm(Enum):
     LBRACKET = "{",
     BASE = "BASE",
     PREFIX = "PREFIX",
-    FULL_IRI = "FULLY SPECIFIED IRI",
+    IRIREF = "FULLY SPECIFIED IRI",
     PREFIX_NAME = "PREFIX NAME",
     COLON = ":",
     IRI = "IRI",

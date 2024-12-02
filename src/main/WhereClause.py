@@ -1,4 +1,4 @@
-from SelectClause import SelectClause
+from main import SelectClause
 from typing import List, Tuple
 
 class WhereClause:

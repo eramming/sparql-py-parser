@@ -1,4 +1,4 @@
-from . import SelectQuery, Prologue
+from main import SelectQuery, Prologue
 
 class Query:
 
