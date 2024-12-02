@@ -1,0 +1,10 @@
+prefix foaf: <http://xmlns.com/foaf/0.1/>
+prefix ex: <http://bbn.com/ami/ix/ce#>
+
+SELECT ?person
+       (SUM(?publishedCount, ?draftCount) AS ?novel_count)
+WHERE {
+    ?person foaf:knows "Albert" ;
+            ex:publishedCount ?publishedCount ;
+            ex:draftCount ?draftCount .
+}
