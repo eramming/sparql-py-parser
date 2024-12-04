@@ -102,10 +102,10 @@ class Tokenizer:
         match: Match = re.search(pattern, query_str)
         if not match:
             return False
-        keyword: str = match.groups()[0]
+        keyword: str = match.groups()[0].upper()
         try:
             tokens.put(Token(QueryTerm(keyword)))
-        except KeyError:
+        except ValueError:
             return False
         remainder: str = query_str[len(keyword):].lstrip()
         self.tokenize_helper(remainder, tokens)

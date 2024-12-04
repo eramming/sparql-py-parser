@@ -29,7 +29,22 @@ def test_tokenizer_prologue() -> None:
     assert tokens.get(block=False).term == QueryTerm.EOF
 
 def test_tokenizer_prologue_with_base() -> None:
-    raise NotImplementedError()
+    query_str: str = '''
+        BASE <http://example1-company.org/>
+        base <http://example2-company.org/>
+    '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get(block=False).term == QueryTerm.BASE
+    iriref1: Token = tokens.get(block=False)
+    assert iriref1.term == QueryTerm.IRIREF
+    assert iriref1.content == "http://example1-company.org/"
+    assert tokens.get(block=False).term == QueryTerm.BASE
+    iriref2: Token = tokens.get(block=False)
+    assert iriref2.term == QueryTerm.IRIREF
+    assert iriref2.content == "http://example2-company.org/"
+    assert tokens.get(block=False).term == QueryTerm.EOF
 
 def test_tokenizer_select_variables() -> None:
     query_str: str = "SELECT ?first_name ?_AGE ?4th_grade_teacher"
@@ -167,6 +182,14 @@ def test_tokenizer_where() -> None:
     assert tokens.get(block=False).term is QueryTerm.EOF
 
 def test_tokenizer_optional() -> None:
+    query_str: str = "WHERE { }"
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get(block=False).term is QueryTerm.WHERE
+    assert tokens.get(block=False).term is QueryTerm.LBRACKET
+    assert tokens.get(block=False).term is QueryTerm.RBRACKET
+    assert tokens.get(block=False).term is QueryTerm.EOF
     raise NotImplementedError()
 
 def test_tokenizer_specify_graph() -> None:
@@ -179,6 +202,9 @@ def test_tokenizer_number_literal() -> None:
     raise NotImplementedError()
 
 def test_tokenizer_string_literal() -> None:
+    raise NotImplementedError()
+
+def test_tokenizer_expected_errors() -> None:
     raise NotImplementedError()
 
 def test_tokenizer_full_query() -> None:
