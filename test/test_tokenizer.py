@@ -136,11 +136,9 @@ def test_tokenizer_built_in_functions() -> None:
         QueryTerm.STRLEN, QueryTerm.STRLEN, QueryTerm.LPAREN,
         QueryTerm.UCASE, QueryTerm.UCASE, QueryTerm.LPAREN,
         QueryTerm.LCASE, QueryTerm.LCASE, QueryTerm.LPAREN,
+        QueryTerm.EOF
     ]
-    assert expected == tokens.get_all()
-    assert tokens.get_now().term is QueryTerm.SELECT
-    assert tokens.get_now().term is QueryTerm.ASTERISK
-    assert tokens.get_now().term is QueryTerm.EOF
+    assert expected == [token.term for token in tokens.get_all()]
 
 def test_tokenizer_dataset_clause() -> None:
     query_str: str = "FROM NAMED ex:MyGraph-uuid"
