@@ -3,12 +3,19 @@ from .QueryTerm import QueryTerm
 from src.LookaheadQueue import LookaheadQueue
 import re
 from re import Match
+from typing import List
 
 
 class Tokenizer:
 
     def __init__(self) -> None:
-        pass
+        self.whitespacers: List[str] = ["FROM", "NAMED", "BASE", "PREFIX", "AS",
+                                        "GRAPH", "NOT"]
+        self.brack_or_white: List[str] = ["WHERE", "OPTIONAL"]
+        self.paren_or_white: List[str] = [
+            "COUNT", "SUM", "MIN", "MAX", "AVG", "SAMPLE", "GROUP_CONCAT", "REGEX",
+            "SUBSTR", "REPLACE", "EXISTS", "ABS", "CEIL", "FLOOR", "ROUND", "CONCAT",
+            "STRLEN", "UCASE", "LCASE", "SELECT", "DISTINCT"]
 
     def tokenize(self, query_str: str) -> LookaheadQueue:
         tokens: LookaheadQueue = LookaheadQueue()
@@ -20,7 +27,15 @@ class Tokenizer:
         if len(query_str) == 0:
             tokens.put(Token(QueryTerm.EOF))
             return
+        matched: bool = self.tokenize_single_char_identifiers(query_str, tokens)
+        if not matched:
+            matched = self.tokenize_keyword(query_str, tokens)
+        if not matched:
+            remainder: str = self.prefixed_name_prefix_tokenizer(query_str, tokens)
+            self.tokenize_helper(remainder, tokens)
         
+    def tokenize_single_char_identifiers(self, query_str: str, tokens: LookaheadQueue) -> bool:
+        matched: bool = True
         first_letter: str = query_str[0]
         if first_letter == "{":
             tokens.put(Token(QueryTerm.LBRACKET))
@@ -28,6 +43,14 @@ class Tokenizer:
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "}":
             tokens.put(Token(QueryTerm.RBRACKET))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif first_letter == "(":
+            tokens.put(Token(QueryTerm.LPAREN))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif first_letter == ")":
+            tokens.put(Token(QueryTerm.RPAREN))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "<":
@@ -61,53 +84,61 @@ class Tokenizer:
                 tokens.put(Token(QueryTerm.EOF))
                 return
             self.tokenize_helper(query_str[indx:].lstrip(), tokens)
-        # Regex ensures there's some kind of whitespace after the keyword
-        elif re.search("^DISTINCT\\s$", query_str[0:9].upper()):
-            tokens.put(Token(QueryTerm.DISTINCT))
-            remainder: str = query_str[8:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^SELECT\\s$", query_str[0:7].upper()):
-            tokens.put(Token(QueryTerm.SELECT))
-            remainder: str = query_str[6:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^FROM\\s$", query_str[0:5].upper()):
-            tokens.put(Token(QueryTerm.FROM))
-            remainder: str = query_str[4:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^BASE\\s$", query_str[0:5].upper()):
-            tokens.put(Token(QueryTerm.BASE))
-            remainder: str = query_str[4:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^PREFIX\\s$", query_str[0:7].upper()):
-            tokens.put(Token(QueryTerm.PREFIX))
-            remainder: str = query_str[6:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^AS\\s$", query_str[0:3].upper()):
-            tokens.put(Token(QueryTerm.AS))
-            remainder: str = query_str[2:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^NAMED\\s$", query_str[0:6].upper()):
-            tokens.put(Token(QueryTerm.NAMED))
-            remainder: str = query_str[5:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^WHERE(\\s|{)$", query_str[0:6].upper()):
-            tokens.put(Token(QueryTerm.WHERE))
-            remainder: str = query_str[5:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^OPTIONAL(\\s|{)$", query_str[0:9].upper()):
-            tokens.put(Token(QueryTerm.OPTIONAL))
-            remainder: str = query_str[8:].lstrip()
-            self.tokenize_helper(remainder, tokens)
-        elif re.search("^GRAPH\\s$", query_str[0:6].upper()):
-            tokens.put(Token(QueryTerm.GRAPH))
-            remainder: str = query_str[5:].lstrip()
-            self.tokenize_helper(remainder, tokens)
         elif re.search("^(\\+?|-?)[0-9]+(\\.[0-9]*)?", query_str):
             remainder: str = self.number_literal_tokenizer(query_str, tokens)
             self.tokenize_helper(remainder, tokens)
         else:
-            remainder: str = self.prefixed_name_prefix_tokenizer(query_str, tokens)
-            self.tokenize_helper(remainder, tokens)
+            matched = False
+        return matched
+        
+    def tokenize_keyword(self, query_str: str, tokens: LookaheadQueue) -> None:
+        match: Match = re.search("(.+)\\s", query_str)
+        if not match:
+            return False
+        word: str = match.groups()[0]
+        match: Match = re.search("(\\s+.)", query_str)
+        if not match:
+            return False
+        next_nonwhite_char: str = match.groups()[0][-1]
+        if "(" in word or next_nonwhite_char == "(":
+            return self.tokenize_keyword_trail_white_paren(query_str, tokens)
+        elif "{" in word or next_nonwhite_char == "{":
+            return self.tokenize_keyword_trail_white_brack(query_str, tokens)
+        else:
+            return self.tokenize_keyword_trail_white(query_str, tokens)
+
+    def tokenize_keyword_trail_white(self, query_str: str, tokens: LookaheadQueue) -> str:
+        trail_white_template: str = "^{{ INSERT_HERE }}\\s"
+        for keyword in self.whitespacers:
+            pattern: str = trail_white_template.replace("{{ INSERT_HERE }}", keyword)
+            if re.search(pattern, query_str[0:len(keyword) + 1].upper()):
+                tokens.put(Token(QueryTerm(keyword)))
+                remainder: str = query_str[len(keyword):].lstrip()
+                self.tokenize_helper(remainder, tokens)
+                return True
+        return False
+
+    def tokenize_keyword_trail_white_brack(self, query_str: str, tokens: LookaheadQueue) -> str:
+        trail_white_brack_template: str = "^{{ INSERT_HERE }}(\\s|{)"
+        for keyword in self.brack_or_white:
+            pattern: str = trail_white_brack_template.replace("{{ INSERT_HERE }}", keyword)
+            if re.search(pattern, query_str[0:len(keyword) + 1].upper()):
+                tokens.put(Token(QueryTerm(keyword)))
+                remainder: str = query_str[len(keyword):].lstrip()
+                self.tokenize_helper(remainder, tokens)
+                return True
+        return False
+
+    def tokenize_keyword_trail_white_paren(self, query_str: str, tokens: LookaheadQueue) -> str:
+        trail_white_paren_template: str = "^{{ INSERT_HERE }}(\\s|\\()"
+        for keyword in self.paren_or_white:
+            pattern: str = trail_white_paren_template.replace("{{ INSERT_HERE }}", keyword)
+            if re.search(pattern, query_str[0:len(keyword) + 1].upper()):
+                tokens.put(Token(QueryTerm(keyword)))
+                remainder: str = query_str[len(keyword):].lstrip()
+                self.tokenize_helper(remainder, tokens)
+                return True
+        return False
 
     def iri_ref_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
         match: Match = re.search("(^<[a-z0-9A-Z:_\\-#%\\.\\/]+>)", query_str)
@@ -146,8 +177,8 @@ class Tokenizer:
     # Always after a colon
     def prefixed_name_local_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
         pattern: str = "(^([a-zA-Z_:0-9]|%[0-9A-Fa-f]{2})"
-        pattern += "([a-zA-Z_:0-9\\-\\.]|%[0-9A-Fa-f]{2})*"
-        pattern += "([a-zA-Z_:0-9\\-]|%[0-9A-Fa-f]{2})?)"
+        pattern += "(([a-zA-Z_:0-9\\-\\.]|%[0-9A-Fa-f]{2})*"
+        pattern += "[a-zA-Z_:0-9\\-]|%[0-9A-Fa-f]{2})?)"
         match: Match = re.search(pattern, query_str)
         if not match:
             raise ValueError("Invalid prefixed_name_local")
@@ -178,7 +209,7 @@ class Tokenizer:
         return query_str[len(literal) + quote_count:].lstrip()
     
     def number_literal_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
-        match: Match = re.search("^((+?|-?)[0-9]+(\\.[0-9]*)?)", query_str)
+        match: Match = re.search("^((\\+?|-?)[0-9]+(\\.[0-9]*)?)", query_str)
         if not match:
             raise ValueError("Invalid number literal")
         num_as_string: str = match.groups()[0]

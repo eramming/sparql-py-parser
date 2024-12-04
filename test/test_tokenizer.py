@@ -1,5 +1,6 @@
 from src.tokens import Tokenizer, Token, QueryTerm
 from src.LookaheadQueue import LookaheadQueue
+from typing import List
 
 def test_tokenizer_prologue() -> None:
     query_str: str = '''
@@ -26,6 +27,9 @@ def test_tokenizer_prologue() -> None:
     assert iriref.term == QueryTerm.IRIREF
     assert iriref.content == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     assert tokens.get(block=False).term == QueryTerm.EOF
+
+def test_tokenizer_prologue_with_base() -> None:
+    raise NotImplementedError()
 
 def test_tokenizer_select_variables() -> None:
     query_str: str = "SELECT ?first_name ?_AGE ?4th_grade_teacher"
@@ -65,6 +69,79 @@ def test_tokenizer_select_all() -> None:
     assert tokens.get(block=False).term is QueryTerm.ASTERISK
     assert tokens.get(block=False).term is QueryTerm.EOF
 
+def test_tokenizer_reassigned_select_var() -> None:
+    query_str: str = "SELECT (UCASE(?first_name) AS ?uppercase_fname)"
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get(block=False).term is QueryTerm.SELECT
+    assert tokens.get(block=False).term is QueryTerm.LPAREN
+    assert tokens.get(block=False).term is QueryTerm.UCASE
+    assert tokens.get(block=False).term is QueryTerm.LPAREN
+    var1: Token = tokens.get(block=False)
+    assert var1.term == QueryTerm.VARIABLE
+    assert var1.content == "first_name"
+    assert tokens.get(block=False).term is QueryTerm.RPAREN
+    assert tokens.get(block=False).term is QueryTerm.AS
+    var2: Token = tokens.get(block=False)
+    assert var2.term == QueryTerm.VARIABLE
+    assert var2.content == "uppercase_fname"
+    assert tokens.get(block=False).term is QueryTerm.RPAREN
+    assert tokens.get(block=False).term is QueryTerm.EOF
+
+def test_tokenizer_built_in_functions() -> None:
+    query_str: str = '''
+        COUNT COUNT(
+        SUM SUM(
+        MIN MIN(
+        MAX MAX(
+        AVG AVG(
+        SAMPLE SAMPLE(
+        GROUP_CONCAT GROUP_CONCAT(
+        REGEX REGEX(
+        SUBSTR SUBSTR(
+        REPLACE REPLACE(
+        EXISTS EXISTS(
+        NOT
+        ABS ABS(
+        CEIL CEIL(
+        FLOOR FLOOR(
+        ROUND ROUND(
+        CONCAT CONCAT(
+        STRLEN STRLEN(
+        UCASE UCASE(
+        LCASE LCASE(
+    '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    expected: List[QueryTerm] = [
+        QueryTerm.COUNT, QueryTerm.COUNT, QueryTerm.LPAREN,
+        QueryTerm.SUM, QueryTerm.SUM, QueryTerm.LPAREN,
+        QueryTerm.MIN, QueryTerm.MIN, QueryTerm.LPAREN,
+        QueryTerm.MAX, QueryTerm.MAX, QueryTerm.LPAREN,
+        QueryTerm.AVG, QueryTerm.AVG, QueryTerm.LPAREN,
+        QueryTerm.SAMPLE, QueryTerm.SAMPLE, QueryTerm.LPAREN,
+        QueryTerm.GROUP_CONCAT, QueryTerm.GROUP_CONCAT, QueryTerm.LPAREN,
+        QueryTerm.REGEX, QueryTerm.REGEX, QueryTerm.LPAREN,
+        QueryTerm.SUBSTR, QueryTerm.SUBSTR, QueryTerm.LPAREN,
+        QueryTerm.REPLACE, QueryTerm.REPLACE, QueryTerm.LPAREN,
+        QueryTerm.EXISTS, QueryTerm.EXISTS, QueryTerm.LPAREN,
+        QueryTerm.NOT,
+        QueryTerm.ABS, QueryTerm.ABS, QueryTerm.LPAREN,
+        QueryTerm.CEIL, QueryTerm.CEIL, QueryTerm.LPAREN,
+        QueryTerm.FLOOR, QueryTerm.FLOOR, QueryTerm.LPAREN,
+        QueryTerm.ROUND, QueryTerm.ROUND, QueryTerm.LPAREN,
+        QueryTerm.CONCAT, QueryTerm.CONCAT, QueryTerm.LPAREN,
+        QueryTerm.STRLEN, QueryTerm.STRLEN, QueryTerm.LPAREN,
+        QueryTerm.UCASE, QueryTerm.UCASE, QueryTerm.LPAREN,
+        QueryTerm.LCASE, QueryTerm.LCASE, QueryTerm.LPAREN,
+    ]
+    assert expected == tokens.get_all()
+    assert tokens.get_now().term is QueryTerm.SELECT
+    assert tokens.get_now().term is QueryTerm.ASTERISK
+    assert tokens.get_now().term is QueryTerm.EOF
+
 def test_tokenizer_dataset_clause() -> None:
     query_str: str = "FROM NAMED ex:MyGraph-uuid"
     tokenizer: Tokenizer = Tokenizer()
@@ -81,6 +158,31 @@ def test_tokenizer_dataset_clause() -> None:
     assert local_name.content == "MyGraph-uuid"
     assert tokens.get(block=False).term is QueryTerm.EOF
 
+def test_tokenizer_where() -> None:
+    query_str: str = "WHERE { }"
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get(block=False).term is QueryTerm.WHERE
+    assert tokens.get(block=False).term is QueryTerm.LBRACKET
+    assert tokens.get(block=False).term is QueryTerm.RBRACKET
+    assert tokens.get(block=False).term is QueryTerm.EOF
+
+def test_tokenizer_optional() -> None:
+    raise NotImplementedError()
+
+def test_tokenizer_specify_graph() -> None:
+    raise NotImplementedError()
+
+def test_tokenizer_comments() -> None:
+    raise NotImplementedError()
+
+def test_tokenizer_number_literal() -> None:
+    raise NotImplementedError()
+
+def test_tokenizer_string_literal() -> None:
+    raise NotImplementedError()
+
 def test_tokenizer_full_query() -> None:
     query_str: str = '''
         prefix foaf: <http://xmlns.com/foaf/0.1/>
@@ -88,7 +190,8 @@ def test_tokenizer_full_query() -> None:
         # An example query
         SELECT *
         WHERE {
-            ?person foaf:givenName "Eric" .
+            ?person foaf:givenName "Eric" ;
+                    foaf:age 26 .
         }
         '''
     tokenizer: Tokenizer = Tokenizer()
@@ -121,22 +224,18 @@ def test_tokenizer_full_query() -> None:
     assert string_literal.term == QueryTerm.STRING_LITERAL
     assert string_literal.content == "Eric"
 
+    assert tokens.get(block=False).term is QueryTerm.SEMI_COLON
+    prefix_name: Token = tokens.get(block=False)
+    assert prefix_name.term == QueryTerm.PREFIXED_NAME_PREFIX
+    assert prefix_name.content == "foaf"
+    assert tokens.get(block=False).term is QueryTerm.COLON
+    local_name: Token = tokens.get(block=False)
+    assert local_name.term == QueryTerm.PREFIXED_NAME_LOCAL
+    assert local_name.content == "age"
+    string_literal: Token = tokens.get(block=False)
+    assert string_literal.term == QueryTerm.NUMBER_LITERAL
+    assert string_literal.content == "26"
+
     assert tokens.get(block=False).term is QueryTerm.PERIOD
     assert tokens.get(block=False).term is QueryTerm.RBRACKET
     assert tokens.get(block=False).term is QueryTerm.EOF
-
-
-def test_tokenizer_simple_where() -> None:
-    raise NotImplementedError()
-
-def test_tokenizer_complex_where() -> None:
-    raise NotImplementedError()
-
-def test_tokenizer_select_with_optional() -> None:
-    raise NotImplementedError()
-
-def test_tokenizer_specify_graph() -> None:
-    raise NotImplementedError()
-
-def test_tokenizer_comments() -> None:
-    raise NotImplementedError()
