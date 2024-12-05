@@ -25,9 +25,10 @@ class Tokenizer:
         if not matched:
             matched = self.tokenize_keyword(query_str, tokens)
         if not matched:
-            remainder: str = self.prefixed_name_prefix_tokenizer(query_str, tokens)
-            self.tokenize_helper(remainder, tokens)
-        
+            matched = self.tokenize_prefixed_name_prefix(query_str, tokens)
+        if not matched:
+            raise ValueError(f"Couldn't tokenize the remainder of the string:\n{query_str}")
+            
     def tokenize_single_char_identifiers(self, query_str: str, tokens: LookaheadQueue) -> bool:
         matched: bool = True
         first_letter: str = query_str[0]
@@ -103,13 +104,13 @@ class Tokenizer:
         if not match:
             return False
         keyword: str = match.groups()[0].upper()
-        try:
-            tokens.put(Token(QueryTerm(keyword)))
-        except ValueError:
-            return False
-        remainder: str = query_str[len(keyword):].lstrip()
-        self.tokenize_helper(remainder, tokens)
-        return True
+        qt: QueryTerm = QueryTerm.from_string(keyword)
+        if qt:
+            tokens.put(Token(qt))
+            remainder: str = query_str[len(keyword):].lstrip()
+            self.tokenize_helper(remainder, tokens)
+            return True
+        return False
 
     def iri_ref_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
         match: Match = re.search("(^<[a-z0-9A-Z:_\\-#%\\.\\/]+>)", query_str)
@@ -128,20 +129,19 @@ class Tokenizer:
         return query_str[len(variable):].lstrip()
     
     # Always before a colon
-    def prefixed_name_prefix_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
+    def tokenize_prefixed_name_prefix(self, query_str: str, tokens: LookaheadQueue) -> str:
         match: Match = re.search("(^[a-zA-Z_][a-zA-Z_0-9\\.\\-]*[a-zA-Z_0-9\\-]?:)", query_str)
         if not match:
-            raise ValueError("Invalid prefixed name prefix")
+            return False
         prefix_name: str = match.groups()[0]
         tokens.put(Token(QueryTerm.PREFIXED_NAME_PREFIX, prefix_name[0:len(prefix_name) - 1]))
         tokens.put(Token(QueryTerm.COLON))
 
         remainder: str = query_str[len(prefix_name):]
         first_letter: str = remainder[0]
-        if first_letter == "<":
-            return remainder
-        elif first_letter == " ":
-            return remainder.lstrip()
+        if first_letter == "<" or first_letter == " ":
+            self.tokenize_helper(remainder.lstrip(), tokens)
+            return True
         else:
             return self.prefixed_name_local_tokenizer(remainder, tokens)
     
@@ -155,22 +155,23 @@ class Tokenizer:
             raise ValueError("Invalid prefixed_name_local")
         local_name: str = match.groups()[0]
         tokens.put(Token(QueryTerm.PREFIXED_NAME_LOCAL, local_name))
-        return query_str[len(local_name):].lstrip()
+        self.tokenize_helper(query_str[len(local_name):].lstrip(), tokens)
+        return True
     
     def string_literal_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
         pattern: str = ""
         quote_count: int = None
         if query_str[0:3] == "'''":
-            pattern = "^'''(.+)'''"
+            pattern = "^'''([^']+)'''"
             quote_count = 6
         elif query_str[0] == "'":
-            pattern = "^'(.+)'"
+            pattern = "^'([^'\\n\\r]+)'"
             quote_count = 2
         elif query_str[0:3] == '"""':
-            pattern = '^"""(.+)"""'
+            pattern = '^"""([^"]+)"""'
             quote_count = 6
         else:
-            pattern = '^"(.+)"'
+            pattern = '^"([^"\\n\\r]+)"'
             quote_count = 2
         match: Match = re.search(pattern, query_str)
         if not match:

@@ -7,26 +7,25 @@ class QueryTerm(Enum):
     LBRACKET = "{"
     BASE = "BASE"
     PREFIX = "PREFIX"
-    IRIREF = "IRIREF"
-    PREFIXED_NAME_PREFIX = "PREFIXED_NAME_PREFIX"
-    PREFIXED_NAME_LOCAL = "PREFIXED_NAME_LOCAL"
+    IRIREF = None
+    PREFIXED_NAME_PREFIX = None
+    PREFIXED_NAME_LOCAL = None
     COLON = ":"
-    IRI = "IRI"
     FROM = "FROM"
     SELECT = "SELECT"
     ASTERISK = "*"
-    VARIABLE = "VARIABLE"
+    VARIABLE = None
     WHERE = "WHERE"
     SEMI_COLON = ";"
     PERIOD = "."
     DISTINCT = "DISTINCT"
     AS = "AS"
-    STRING_LITERAL = "STRING_LITERAL"
-    NUMBER_LITERAL = "NUMBER_LITERAL"
+    STRING_LITERAL = None
+    NUMBER_LITERAL = None
     NAMED = "NAMED"
     GRAPH = "GRAPH"
     OPTIONAL = "OPTIONAL"
-    EOF = "EOF"
+    EOF = None
     COUNT = "COUNT"
     SUM = "SUM"
     MIN = "MIN"
@@ -47,3 +46,11 @@ class QueryTerm(Enum):
     STRLEN = "STRLEN"
     UCASE = "UCASE"
     LCASE = "LCASE"
+
+    def from_string(term: str) -> 'QueryTerm':
+        if term is None:
+            return None
+        try:
+            return QueryTerm(term)
+        except ValueError:
+            return None

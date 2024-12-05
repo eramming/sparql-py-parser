@@ -182,30 +182,119 @@ def test_tokenizer_where() -> None:
     assert tokens.get(block=False).term is QueryTerm.EOF
 
 def test_tokenizer_optional() -> None:
-    query_str: str = "WHERE { }"
+    query_str: str = "OPTIONAL { }"
     tokenizer: Tokenizer = Tokenizer()
     tokens: LookaheadQueue = tokenizer.tokenize(query_str)
 
-    assert tokens.get(block=False).term is QueryTerm.WHERE
+    assert tokens.get(block=False).term is QueryTerm.OPTIONAL
     assert tokens.get(block=False).term is QueryTerm.LBRACKET
     assert tokens.get(block=False).term is QueryTerm.RBRACKET
     assert tokens.get(block=False).term is QueryTerm.EOF
-    raise NotImplementedError()
 
 def test_tokenizer_specify_graph() -> None:
-    raise NotImplementedError()
+    query_str: str = "GRAPH ex:MyGraph-uuid { }"
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get(block=False).term is QueryTerm.GRAPH
+    prefix_name: Token = tokens.get(block=False)
+    assert prefix_name.term == QueryTerm.PREFIXED_NAME_PREFIX
+    assert prefix_name.content == "ex"
+    assert tokens.get(block=False).term == QueryTerm.COLON
+    local_name: Token = tokens.get(block=False)
+    assert local_name.term == QueryTerm.PREFIXED_NAME_LOCAL
+    assert local_name.content == "MyGraph-uuid"
+    assert tokens.get(block=False).term is QueryTerm.LBRACKET
+    assert tokens.get(block=False).term is QueryTerm.RBRACKET
+    assert tokens.get(block=False).term is QueryTerm.EOF
 
 def test_tokenizer_comments() -> None:
-    raise NotImplementedError()
+    query_str: str = '''
+        # My Query
+        ?var1 # ex:hasId
+        # Comments
+        ?var2 # ?var3 ## . ()
+    '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    var1: Token = tokens.get(block=False)
+    assert var1.term == QueryTerm.VARIABLE
+    assert var1.content == "var1"
+    var2: Token = tokens.get(block=False)
+    assert var2.term == QueryTerm.VARIABLE
+    assert var2.content == "var2"
+    assert tokens.get(block=False).term is QueryTerm.EOF
 
 def test_tokenizer_number_literal() -> None:
-    raise NotImplementedError()
+    query_str: str = '''
+        67 +67 -67 -67.0 +67.0 0.1415
+    '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    num1: Token = tokens.get(block=False)
+    assert num1.term == QueryTerm.NUMBER_LITERAL
+    assert num1.content == "67"
+    num2: Token = tokens.get(block=False)
+    assert num2.term == QueryTerm.NUMBER_LITERAL
+    assert num2.content == "+67"
+    num3: Token = tokens.get(block=False)
+    assert num3.term == QueryTerm.NUMBER_LITERAL
+    assert num3.content == "-67"
+    num4: Token = tokens.get(block=False)
+    assert num4.term == QueryTerm.NUMBER_LITERAL
+    assert num4.content == "-67.0"
+    num5: Token = tokens.get(block=False)
+    assert num5.term == QueryTerm.NUMBER_LITERAL
+    assert num5.content == "+67.0"
+    num6: Token = tokens.get(block=False)
+    assert num6.term == QueryTerm.NUMBER_LITERAL
+    assert num6.content == "0.1415"
+    assert tokens.get(block=False).term is QueryTerm.EOF
 
 def test_tokenizer_string_literal() -> None:
-    raise NotImplementedError()
+    query_str: str = '''
+        "Son of a !@#$%^&*()_-+={[]}|;.,<>?/" "87.2" """Multi
+        Line
+        Literal""" 'Son of a !@#$%^&*()_-+={[]}|;.,<>?/' '87.2' \'\'\'Multi
+        Line
+        Literal\'\'\'
+    '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
 
-def test_tokenizer_expected_errors() -> None:
-    raise NotImplementedError()
+    lit1: Token = tokens.get(block=False)
+    assert lit1.term == QueryTerm.STRING_LITERAL
+    assert lit1.content == "Son of a !@#$%^&*()_-+={[]}|;.,<>?/"
+    lit2: Token = tokens.get(block=False)
+    assert lit2.term == QueryTerm.STRING_LITERAL
+    assert lit2.content == "87.2"
+    lit3: Token = tokens.get(block=False)
+    assert lit3.term == QueryTerm.STRING_LITERAL
+    assert lit3.content.replace(" ", "") == "Multi\nLine\nLiteral"
+    lit4: Token = tokens.get(block=False)
+    assert lit4.term == QueryTerm.STRING_LITERAL
+    assert lit4.content == "Son of a !@#$%^&*()_-+={[]}|;.,<>?/"
+    lit5: Token = tokens.get(block=False)
+    assert lit5.term == QueryTerm.STRING_LITERAL
+    assert lit5.content == "87.2"
+    lit6: Token = tokens.get(block=False)
+    assert lit6.term == QueryTerm.STRING_LITERAL
+    assert lit6.content.replace(" ", "") == "Multi\nLine\nLiteral"
+    assert tokens.get(block=False).term is QueryTerm.EOF
+
+def test_tokenizer_expected_failures() -> None:
+    queries: List[str] = ["EOF", "PREFIXED_NAME_PREFIX", "PREFIXED_NAME_LOCAL",
+                          "IRIREF", "VARIABLE", "NUMBER_LITERAL", "STRING_LITERAL"]
+    
+    for query_str in queries:
+        tokenizer: Tokenizer = Tokenizer()
+        try:
+            tokenizer.tokenize(query_str)
+            assert False
+        except ValueError:
+            continue
 
 def test_tokenizer_full_query() -> None:
     query_str: str = '''
