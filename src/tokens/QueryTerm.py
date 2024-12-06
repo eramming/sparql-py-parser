@@ -1,4 +1,15 @@
 from enum import Enum
+from typing import List
+
+NON_KEYWORD_TERMS: List[str] = [
+    "IRIREF", "PREFIXED_NAME_PREFIX", "PREFIXED_NAME_LOCAL", "VARIABLE",
+    "STRING_LITERAL", "NUMBER_LITERAL", "EOF"
+]
+BUILT_IN_CALLS: List[str] = [
+    "COUNT", "SUM", "MIN", "MAX", "AVG", "SAMPLE", "GROUP_CONCAT", "REGEX",
+    "SUBSTR", "REPLACE", "EXISTS", "NOT", "ABS", "CEIL", "FLOOR", "ROUND",
+    "CONCAT", "STRLEN", "UCASE", "LCASE"
+]
 
 class QueryTerm(Enum):
     RPAREN = ")"
@@ -7,25 +18,26 @@ class QueryTerm(Enum):
     LBRACKET = "{"
     BASE = "BASE"
     PREFIX = "PREFIX"
-    IRIREF = None
-    PREFIXED_NAME_PREFIX = None
-    PREFIXED_NAME_LOCAL = None
+    IRIREF = "IRIREF"
+    PREFIXED_NAME_PREFIX = "PREFIXED_NAME_PREFIX"
+    PREFIXED_NAME_LOCAL = "PREFIXED_NAME_LOCAL"
     COLON = ":"
     FROM = "FROM"
     SELECT = "SELECT"
     ASTERISK = "*"
-    VARIABLE = None
+    VARIABLE = "VARIABLE"
     WHERE = "WHERE"
     SEMI_COLON = ";"
     PERIOD = "."
+    COMMA = ","
     DISTINCT = "DISTINCT"
     AS = "AS"
-    STRING_LITERAL = None
-    NUMBER_LITERAL = None
+    STRING_LITERAL = "STRING_LITERAL"
+    NUMBER_LITERAL = "NUMBER_LITERAL"
     NAMED = "NAMED"
     GRAPH = "GRAPH"
     OPTIONAL = "OPTIONAL"
-    EOF = None
+    EOF = "EOF"
     COUNT = "COUNT"
     SUM = "SUM"
     MIN = "MIN"
@@ -47,10 +59,18 @@ class QueryTerm(Enum):
     UCASE = "UCASE"
     LCASE = "LCASE"
 
-    def from_string(term: str) -> 'QueryTerm':
+    def from_keyword(term: str) -> 'QueryTerm':
         if term is None:
             return None
-        try:
-            return QueryTerm(term)
-        except ValueError:
-            return None
+        if term not in NON_KEYWORD_TERMS:
+            try:
+                return QueryTerm(term)
+            except ValueError:
+                return None
+        return None
+    
+    def built_in_calls() -> List[str]:
+        return BUILT_IN_CALLS
+    
+    def __str__(self):
+        return self.name.lower()

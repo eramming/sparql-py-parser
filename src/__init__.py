@@ -12,7 +12,8 @@ from .SelectQuery import SelectQuery
 from .TriplesBlock import TriplesBlock
 from .WhereClause import WhereClause
 from .LookaheadQueue import LookaheadQueue
- 
+from .Expression import Expression
+
 # Add folder to path
 (parent_folder_path, _) = os.path.split(os.path.dirname(__file__))
 sys.path.append(parent_folder_path)

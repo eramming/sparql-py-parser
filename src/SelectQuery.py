@@ -6,7 +6,7 @@ from .WhereClause import WhereClause
 class SelectQuery:
     
     def __init__(self) -> None:
-        self.select_clause: SelectClause = None
-        self.dataset_clause: DatasetClause = None
-        self.where_clause: WhereClause = None
+        self.select_clause: SelectClause = SelectClause()
+        self.dataset_clause: DatasetClause = DatasetClause()
+        self.where_clause: WhereClause = WhereClause()
     

@@ -20,5 +20,3 @@ class LookaheadQueue(Queue):
             q_as_list: List = list(self.queue)
             self.queue = deque()
             return q_as_list
-            
-

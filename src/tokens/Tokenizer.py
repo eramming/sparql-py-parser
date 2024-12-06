@@ -62,6 +62,10 @@ class Tokenizer:
             tokens.put(Token(QueryTerm.PERIOD))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
+        elif first_letter == ",":
+            tokens.put(Token(QueryTerm.COMMA))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
         elif first_letter == ";":
             tokens.put(Token(QueryTerm.SEMI_COLON))
             remainder: str = query_str[1:].lstrip()
@@ -104,7 +108,7 @@ class Tokenizer:
         if not match:
             return False
         keyword: str = match.groups()[0].upper()
-        qt: QueryTerm = QueryTerm.from_string(keyword)
+        qt: QueryTerm = QueryTerm.from_keyword(keyword)
         if qt:
             tokens.put(Token(qt))
             remainder: str = query_str[len(keyword):].lstrip()
