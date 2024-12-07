@@ -1,14 +1,34 @@
 from .GroupGraphPattern import GroupGraphPattern
+from .ExprOp import ExprOp
 from typing import List
+from uuid import uuid4
 
 class Expression:
     def __init__(self) -> None:
-        pass
+        self._id = uuid4()
+
+    def __hash__(self) -> int:
+        return hash(self._id)
+
+    def __eq__(self, value) -> bool:
+        if isinstance(value, Expression):
+            return value._id == self._id
+        return False
+
+
+class MultiExprExpr(Expression):
+
+    def __init__(self, l_expr: Expression, r_expr: Expression, expr_op: ExprOp):
+        super().__init__()
+        self.l_expr: Expression = l_expr
+        self.r_expr: Expression = r_expr
+        self.expr_op: ExprOp = expr_op
 
 
 class Function(Expression):
 
     def __init__(self, func_name: str = None, args: List[Expression] = []):
+        super().__init__()
         self.func_name = func_name
         self.args = args
 
@@ -27,6 +47,31 @@ class Function(Expression):
         return f"{self.func_name.upper()}({arg_str})"
 
 
+class AggregateFunction(Function):
+
+    def __init__(self, func_name: str = None, args: List[Expression] = [],
+                 has_distinct_flag: bool = False, extras: str = ""):
+        super().__init__(func_name, args)
+        self.has_distinct_flag: bool = has_distinct_flag
+        self.extras: str = ""  # For certain funcs that can have optional weird tokens/params
+
+    def set_distinct_flag(self) -> None:
+        self.has_distinct_flag = True
+
+    def set_extras(self, extras: str) -> None:
+        self.extras = extras
+
+    def __format__(self, format_spec):
+        distinct: str = "DISTINCT " if self.has_distinct_flag else ""
+        arg_str: str = ", ".join(self.args)
+        return f"{self.func_name.upper()}({distinct}{arg_str}{self.extras})"
+    
+    def __str__(self):
+        distinct: str = "DISTINCT " if self.has_distinct_flag else ""
+        arg_str: str = ", ".join(self.args)
+        return f"{self.func_name.upper()}({distinct}{arg_str}{self.extras})"
+
+
 class IdentityFunction(Function):
 
     def __init__(self, args: List[Expression] = []):
@@ -36,6 +81,7 @@ class IdentityFunction(Function):
 class ExistenceExpr(Expression):
 
     def __init__(self, pattern: GroupGraphPattern, not_exists: bool = False):
+        super().__init__()
         self.pattern: GroupGraphPattern = pattern
         self.not_exists: bool = not_exists
 
@@ -43,6 +89,7 @@ class ExistenceExpr(Expression):
 class TerminalExpr(Expression):
 
     def __init__(self, stringified_val: str):
+        super().__init__()
         self.stringified_val: str = stringified_val
 
 

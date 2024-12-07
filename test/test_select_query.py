@@ -1,4 +1,5 @@
-from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause
+from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause, \
+    AggregateFunction, TerminalExpr
 from src.tokens import Tokenizer, Token
 from typing import List
 from src.tokens import QueryTerm as qt
@@ -40,12 +41,12 @@ def test_parser_select_clause() -> None:
     # SELECT DISTINCT ?givenName ?age
     # (GROUP_CONCAT(DISTINCT ?concat_subject_attribute; SEPARATOR=" ~~~~ ") AS ?subject_attributes)
     # ?familyName
-    fname, age, var3, sep = "givenName", "age", "concat_subject_attribute", "~~~~"
+    fname, age, concat_subj_attr, sep = "givenName", "age", "concat_subject_attribute", "~~~~"
     sub_attr, lname = "subject_attributes", "familyName"
     tokens: List[Token] = [
         Token(qt.SELECT), Token(qt.DISTINCT), Token(qt.VARIABLE, fname),
         Token(qt.VARIABLE, age), Token(qt.LPAREN), Token(qt.GROUP_CONCAT),
-        Token(qt.LPAREN), Token(qt.DISTINCT), Token(qt.VARIABLE, var3),
+        Token(qt.LPAREN), Token(qt.DISTINCT), Token(qt.VARIABLE, concat_subj_attr),
         Token(qt.SEMI_COLON), Token(qt.SEPARATOR), Token(qt.EQUALS),
         Token(qt.STRING_LITERAL, sep), Token(qt.RPAREN), Token(qt.AS),
         Token(qt.VARIABLE, sub_attr), Token(qt.RPAREN), Token(qt.VARIABLE, lname)]
@@ -59,7 +60,17 @@ def test_parser_select_clause() -> None:
     assert select_clause.explicit_vars == set(fname, age, lname)
     assert select_clause.is_distinct
     assert not select_clause.is_select_all
-    
+    assert len(select_clause.derived_vars) == 1
+    assert sub_attr in select_clause.derived_vars
+    func: AggregateFunction = select_clause.derived_vars[sub_attr]
+    assert isinstance(func, AggregateFunction)
+    assert func.func_name == "GROUP_CONCAT"
+    assert func.has_distinct_flag
+    assert len(func.args) == 1
+    assert isinstance(func.args[0], TerminalExpr)
+    assert func.args[0].stringified_val == concat_subj_attr
+    assert func.extras == '; SEPARATOR=" ~~~~ "'
+
 
 def test_parser_dataset_clause() -> None:
     base_iri: str = "http://ex.com/"

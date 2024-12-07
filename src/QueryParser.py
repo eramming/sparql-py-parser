@@ -2,7 +2,7 @@ from .tokens import QueryTerm, Token
 from .Query import Query
 from .SelectQuery import SelectQuery
 from .SelectClause import SelectClause
-from .Expression import Expression
+from .Expressions import Expression
 from .GroupGraphPattern import GroupGraphPattern
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
@@ -131,7 +131,7 @@ class QueryParser:
             assert tokens.get_now().term is QueryTerm.AS
             var: Token = tokens.get_now()
             assert var.term is QueryTerm.VARIABLE
-            select_clause.add_derived_var(ex, var.content)
+            select_clause.set_derived_var(ex, var.content)
             assert tokens.get_now().term is QueryTerm.RPAREN
         else:
             self.throw_error([QueryTerm.VARIABLE, QueryTerm.LPAREN], next_tok)
