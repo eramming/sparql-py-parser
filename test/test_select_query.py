@@ -1,4 +1,4 @@
-from src import QueryParser, Query, LookaheadQueue, Prologue
+from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause
 from src.tokens import Tokenizer, Token
 from typing import List
 from src.tokens import QueryTerm as qt
@@ -17,6 +17,70 @@ def test_select_all() -> None:
     raise NotImplementedError()
 
 def test_parser_prologue() -> None:
+    # BASE <base_iri> PREFIX foaf:<foaf_iri> PREFIX rdf:<rdf_iri>
+    base_iri: str = "http://ex.com/"
+    foaf: str = "http://xmlns.com/foaf/0.1/"
+    rdf: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    tokens: List[Token] = [
+        Token(qt.BASE), Token(qt.IRIREF, base_iri), Token(qt.PREFIX),
+        Token(qt.PREFIXED_NAME_PREFIX, "foaf"), Token(qt.COLON),
+        Token(qt.IRIREF, foaf), Token(qt.PREFIX),
+        Token(qt.PREFIXED_NAME_PREFIX, "rdf"), Token(qt.COLON),
+        Token(qt.IRIREF, rdf)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    for token in (tokens + SIMPLE_SELECT + SIMPLE_WHERE):
+        tok_queue.put(token)
+    prologue: Prologue = QueryParser().parse(tok_queue).prologue
+    assert prologue.base_iri == base_iri
+    assert len(prologue.prefixes) == 2
+    assert prologue.prefixes["foaf"] == foaf
+    assert prologue.prefixes["rdf"] == rdf
+
+def test_parser_select_clause() -> None:
+    # SELECT DISTINCT ?givenName ?age
+    # (GROUP_CONCAT(DISTINCT ?concat_subject_attribute; SEPARATOR=" ~~~~ ") AS ?subject_attributes)
+    # ?familyName
+    fname, age, var3, sep = "givenName", "age", "concat_subject_attribute", "~~~~"
+    sub_attr, lname = "subject_attributes", "familyName"
+    tokens: List[Token] = [
+        Token(qt.SELECT), Token(qt.DISTINCT), Token(qt.VARIABLE, fname),
+        Token(qt.VARIABLE, age), Token(qt.LPAREN), Token(qt.GROUP_CONCAT),
+        Token(qt.LPAREN), Token(qt.DISTINCT), Token(qt.VARIABLE, var3),
+        Token(qt.SEMI_COLON), Token(qt.SEPARATOR), Token(qt.EQUALS),
+        Token(qt.STRING_LITERAL, sep), Token(qt.RPAREN), Token(qt.AS),
+        Token(qt.VARIABLE, sub_attr), Token(qt.RPAREN), Token(qt.VARIABLE, lname)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    for token in (tokens + SIMPLE_WHERE):
+        tok_queue.put(token)
+    query: Query = QueryParser().parse(tok_queue)
+    select_clause: SelectClause = query.select_query.select_clause
+    assert query.prologue.base_iri is None
+    assert len(query.prologue.prefixes) == 0
+    assert select_clause.explicit_vars == set(fname, age, lname)
+    assert select_clause.is_distinct
+    assert not select_clause.is_select_all
+    
+
+def test_parser_dataset_clause() -> None:
+    base_iri: str = "http://ex.com/"
+    foaf: str = "http://xmlns.com/foaf/0.1/"
+    rdf: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    tokens: List[Token] = [
+        Token(qt.BASE), Token(qt.IRIREF, base_iri), Token(qt.PREFIX),
+        Token(qt.PREFIXED_NAME_PREFIX, "foaf"), Token(qt.COLON),
+        Token(qt.IRIREF, foaf), Token(qt.PREFIX),
+        Token(qt.PREFIXED_NAME_PREFIX, "rdf"), Token(qt.COLON),
+        Token(qt.IRIREF, rdf)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    for token in (tokens + SIMPLE_SELECT + SIMPLE_WHERE):
+        tok_queue.put(token)
+    prologue: Prologue = QueryParser().parse(tok_queue).prologue
+    assert prologue.base_iri == base_iri
+    assert len(prologue.prefixes) == 2
+    assert prologue.prefixes["foaf"] == foaf
+    assert prologue.prefixes["rdf"] == rdf
+
+def test_parser_where_clause() -> None:
     base_iri: str = "http://ex.com/"
     foaf: str = "http://xmlns.com/foaf/0.1/"
     rdf: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"

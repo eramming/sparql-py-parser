@@ -30,6 +30,8 @@ class QueryTerm(Enum):
     SEMI_COLON = ";"
     PERIOD = "."
     COMMA = ","
+    EQUALS = "="
+    SEPARATOR = "SEPARATOR"
     DISTINCT = "DISTINCT"
     AS = "AS"
     STRING_LITERAL = "STRING_LITERAL"

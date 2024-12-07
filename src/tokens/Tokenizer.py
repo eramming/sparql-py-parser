@@ -70,6 +70,10 @@ class Tokenizer:
             tokens.put(Token(QueryTerm.SEMI_COLON))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
+        elif first_letter == "=":
+            tokens.put(Token(QueryTerm.EQUALS))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
         elif first_letter == "*":
             tokens.put(Token(QueryTerm.ASTERISK))
             remainder: str = query_str[1:].lstrip()
