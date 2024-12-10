@@ -15,6 +15,12 @@ class Expression:
             return value._id == self._id
         return False
 
+class NegationExpr(Expression):
+
+    def __init__(self, expr: Expression):
+        super().__init__()
+        self.expr: Expression = expr
+
 
 class MultiExprExpr(Expression):
 

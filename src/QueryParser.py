@@ -2,7 +2,9 @@ from .tokens import QueryTerm, Token
 from .Query import Query
 from .SelectQuery import SelectQuery
 from .SelectClause import SelectClause
-from .Expressions import Expression
+from .Expressions import Expression, IdentityFunction, MultiExprExpr, \
+    Function, AggregateFunction, NegationExpr, ExistenceExpr, TerminalExpr
+from .ExprOp import ExprOp
 from .GroupGraphPattern import GroupGraphPattern
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
@@ -131,62 +133,69 @@ class QueryParser:
             assert tokens.get_now().term is QueryTerm.AS
             var: Token = tokens.get_now()
             assert var.term is QueryTerm.VARIABLE
-            select_clause.set_derived_var(ex, var.content)
+            select_clause.set_derived_var(var.content, ex)
             assert tokens.get_now().term is QueryTerm.RPAREN
         else:
             self.throw_error([QueryTerm.VARIABLE, QueryTerm.LPAREN], next_tok)
         return select_clause
 
-    ''' Expression ::= BracketedExpression | BuiltInCall | Var '''
+    ''' Expression ::= BracketedExpression | BuiltInCall | RDFLiteral | NumericLiteral | BoolLiteral | Var '''
     def expression(self, tokens: LookaheadQueue) -> Expression:
         next_tok: Token = tokens.get_now()
         if next_tok.term is QueryTerm.LPAREN:
-            ex: Expression = self.expression(tokens)
+            ex: Expression = IdentityFunction(self.expression(tokens))
             assert tokens.get_now().term is QueryTerm.RPAREN
             return ex
         elif next_tok.term is QueryTerm.VARIABLE:
-            return Expression(f"?{next_tok.content}")
+            return TerminalExpr(f"?{next_tok.content}")
         elif next_tok.term.value in QueryTerm.built_in_calls():
             return self.built_in_call(next_tok.term, tokens)
+        elif next_tok.term is QueryTerm.EXCLAMATION:
+            return NegationExpr(self.expression())
+        elif next_tok.term is QueryTerm.STRING_LITERAL:
+            return TerminalExpr(f"'{next_tok.content}'")
+        elif next_tok.term is QueryTerm.NUMBER_LITERAL:
+            return TerminalExpr(next_tok.content)
+        elif next_tok.term in [QueryTerm.TRUE, QueryTerm.FALSE]:
+            return TerminalExpr(next_tok.content)
         else:
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
             self.throw_error([QueryTerm.LPAREN, QueryTerm.VARIABLE] + built_in_qts, next_tok)
     
     def built_in_call(self, built_in_term: QueryTerm, tokens: LookaheadQueue) -> Expression:
-        # TODO:
-        # Group built_ins by use of parens and number of internal expressions.
-        # What's below is not fully correct. Rework according to above.
         if built_in_term is QueryTerm.NOT:
             assert tokens.get_now().term is QueryTerm.EXISTS
-            return Expression(f"NOT EXISTS {self.group_graph_pattern(tokens)}")
+            return ExistenceExpr(self.group_graph_pattern(), True)
         elif built_in_term is QueryTerm.EXISTS:
-            return Expression(f"EXISTS {self.group_graph_pattern(tokens)}")
-        elif built_in_term is QueryTerm.CONCAT:
-            # TODO: Think about Expression class model. Do I want expression_list
-            # as a str or list. This thinking extends to the others in this function too.
-            return Expression(f"CONCAT {self.expression_list(tokens)}")
+            return ExistenceExpr(self.group_graph_pattern(), False)
         
-        args: Expression = None
+        args: List[Expression] = None
         assert tokens.get_now().term is QueryTerm.LPAREN
-        if built_in_term is QueryTerm.SUBSTR or built_in_term is QueryTerm.REGEX or built_in_term is QueryTerm.REPLACE:
-            ex1: Expression = self.expression(tokens)
-            assert tokens.get_now().term is QueryTerm.COMMA
-            ex2: Expression = self.expression(tokens)
-            arg_str: str = f"{ex1}, {ex2}"
-            if built_in_term is QueryTerm.REPLACE:
-                assert tokens.get_now().term is QueryTerm.COMMA
-                ex3: Expression = self.expression(tokens)
-                arg_str += f", {ex3}"
-            if tokens.lookahead().term is QueryTerm.COMMA:
-                tokens.get_now()
-                ex_extra: Expression = self.expression(tokens)
-                arg_str += f", {ex_extra}"
-            args = Expression(arg_str)
+        if built_in_term is QueryTerm.SUBSTR or built_in_term is QueryTerm.REGEX:
+            args = self.expression_list(tokens, min=2, max=3)
+        elif built_in_term is QueryTerm.REPLACE:
+            args = self.expression_list(tokens, min=3, max=4)
+        elif built_in_term is QueryTerm.CONCAT:
+            args = self.expression_list(tokens, min=1, max=None)
         else:
             args = self.expression(tokens)
         assert tokens.get_now().term is QueryTerm.RPAREN
-        return Expression(f"{built_in_term.value}({args})")
+        return Function(built_in_term.value, args)
 
+    def expression_list(self, tokens: LookaheadQueue, min: int, max: int) -> List[Expression]:
+        if max is not None and min > max:
+            raise ValueError("Min must be <= max")
+        args: List[Expression] = []
+        while tokens.lookahead().term is QueryTerm.COMMA:
+            tokens.get_now()
+            args.append(self.expression(tokens))
+
+        if max is not None and min > len(args) > max:
+            raise ValueError(f"Expected arg count in range [{min},{max}]. Found {len(args)} args.")
+        elif min > len(args):
+            raise ValueError(f"Expected arg count in range [{min},INF]. Found {len(args)} args.")
+        return args
+    
     def dataset_clause(self, tokens: LookaheadQueue, dataset_clause: DatasetClause) -> DatasetClause:
         raise NotImplementedError()
     
@@ -202,10 +211,26 @@ class QueryParser:
         return where_clause
     
     def group_graph_pattern(self, tokens: LookaheadQueue) -> GroupGraphPattern:
-        # TODO: Implement this method
+        ggp_sub_terms: List[QueryTerm] = [QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX,
+                                          QueryTerm.GRAPH, QueryTerm.OPTIONAL]
+        assert tokens.get_now().term is QueryTerm.LBRACKET
+        if tokens.lookahead().term is QueryTerm.SELECT:
+            self.subselect(tokens)
+        elif tokens.lookahead().term in ggp_sub_terms:
+            self.group_graph_pattern_sub(tokens)
+        else:
+            self.throw_error([QueryTerm.SELECT] + ggp_sub_terms, tokens.lookahead())
+        assert tokens.get_now().term is QueryTerm.RBRACKET
         return None
     
-    def expression_list(self, tokens: LookaheadQueue) -> List[Expression]:
+    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp: GroupGraphPattern) -> GroupGraphPatternSub:
+        next_tok: Token = tokens.lookahead()
+        if next_tok.term is QueryTerm.OPTIONAL:
+            tokens.get_now()
+            self.group_graph_pattern(tokens)
+            return ggp
+    
+    def subselect(self, tokens: LookaheadQueue) -> SubSelect:
         raise NotImplementedError()
     
     def throw_error(self, expected_terms: List[QueryTerm], actual_tok: Token) -> None:
