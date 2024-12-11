@@ -1,20 +1,30 @@
-from typing import Dict, List
-from .TriplesBlock import TriplesBlock
-from uuid import uuid4
+from typing import List
+from .SelectClause import SelectClause
+from .GroupGraphPatternSub import GroupGraphPatternSub
+from enum import Enum
+
 
 class GroupGraphPattern:
 
-    def __init__(self, enclosing_clause: str = "") -> None:
-        self.id = uuid4()
-        self.enclosing_clause: str = enclosing_clause
-        self.triple_blocks: Dict[str, TriplesBlock] = {}
-        self.other_clauses: Dict[str, GroupGraphPattern] = {}
-        self.clause_order: List[str] = []
+    class Enclosers(Enum):
+        WHERE = "WHERE"
+        OPTIONAL = "OPTIONAL"
+        GRAPH = "GRAPH"
+        NO_ENCLOSER = ""
 
-    def add_triple_block(self, triple_block: TriplesBlock) -> None:
-        self.clause_order.append(triple_block.id)
-        self.triple_blocks[triple_block.id] = triple_block
+    def __init__(self, enclosing_clause: Enclosers):
+        self.enclosing_clause: GroupGraphPattern.Enclosers = enclosing_clause
+        self.ggp_list: List[GroupGraphPattern] = []
+        self.ggp_sub: GroupGraphPatternSub = None
+        self.sub_select: SelectClause = None
+    
+    def set_ggp_sub(self, ggp_sub: GroupGraphPatternSub) -> None:
+        self.sub_select = None
+        self.ggp_sub = ggp_sub
 
-    def add_non_triple_clause(self, non_triple_clause: 'GroupGraphPattern') -> None:
-        self.clause_order.append(non_triple_clause.id)
-        self.other_clauses[id] = non_triple_clause
+    def set_sub_select(self, sub_select: SelectClause) -> None:
+        self.ggp_sub = None
+        self.sub_select = sub_select
+
+    def add_ggp(self, ggp: 'GroupGraphPattern') -> None:
+        self.ggp_list.append(ggp)

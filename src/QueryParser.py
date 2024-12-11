@@ -6,6 +6,7 @@ from .Expressions import Expression, IdentityFunction, MultiExprExpr, \
     Function, AggregateFunction, NegationExpr, ExistenceExpr, TerminalExpr
 from .ExprOp import ExprOp
 from .GroupGraphPattern import GroupGraphPattern
+from .GroupGraphPatternSub import GroupGraphPatternSub
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
 from .Prologue import Prologue
@@ -24,8 +25,7 @@ class QueryParser:
     def parse(self, tokens: LookaheadQueue) -> Query:
         return self.query(tokens)
 
-    ''' Query ::= Prologue
-              ::= SelectQuery '''
+    ''' Query ::= Prologue SelectQuery '''
     def query(self, tokens: LookaheadQueue) -> Query:
         lookahead: Token = tokens.lookahead()
         prologue: Prologue = None
@@ -88,10 +88,7 @@ class QueryParser:
         if expected:
             self.throw_error(expected, next_tok)
 
-    ''' SelectQuery ::= SelectClause
-                    ::= DatasetClause*
-                    ::= WhereClause
-    '''
+    ''' SelectQuery ::= SelectClause DatasetClause* WhereClause '''
     def select_query(self, tokens: LookaheadQueue) -> SelectQuery:
         select_query: SelectQuery = SelectQuery()
         select_query.select_clause = self.select_clause(tokens, select_query.select_clause)
@@ -101,7 +98,7 @@ class QueryParser:
         return select_query
     
     ''' SelectClause ::= 'SELECT' 'DISTINCT'?
-                     ::= SelectVarList | '*'
+                         (SelectVarList | '*')
     '''
     def select_clause(self, tokens: LookaheadQueue, select_clause: SelectClause) -> SelectClause:
         assert tokens.get_now().term is QueryTerm.SELECT
@@ -162,6 +159,13 @@ class QueryParser:
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
             self.throw_error([QueryTerm.LPAREN, QueryTerm.VARIABLE] + built_in_qts, next_tok)
     
+    '''BuiltInCall ::= 'NOT' 'EXISTS' GroupGraphPattern
+                       | 'EXISTS' GroupGraph Pattern
+                       | 'CONCAT' '(' ExpressionList ')'
+                       | 'REGEX' '(' Expression ',' Expression (',' Expression)? ')'
+                       | 'SUBSTR' '(' Expression ',' Expression (',' Expression)? ')'
+                       | 'REPLACE' '(' Expression ',' Expression ',' Expression (',' Expression)? ')'
+                       | any_other_built_in '(' Expression ')' '''
     def built_in_call(self, built_in_term: QueryTerm, tokens: LookaheadQueue) -> Expression:
         if built_in_term is QueryTerm.NOT:
             assert tokens.get_now().term is QueryTerm.EXISTS
@@ -182,6 +186,7 @@ class QueryParser:
         assert tokens.get_now().term is QueryTerm.RPAREN
         return Function(built_in_term.value, args)
 
+    '''ExpressionList ::= Expression (',' Expression)* '''
     def expression_list(self, tokens: LookaheadQueue, min: int, max: int) -> List[Expression]:
         if max is not None and min > max:
             raise ValueError("Min must be <= max")
@@ -196,9 +201,11 @@ class QueryParser:
             raise ValueError(f"Expected arg count in range [{min},INF]. Found {len(args)} args.")
         return args
     
+    '''DatasetClause ::= 'FROM' (DefaultGraphClause | NamedGraphClause) '''
     def dataset_clause(self, tokens: LookaheadQueue, dataset_clause: DatasetClause) -> DatasetClause:
         raise NotImplementedError()
     
+    '''WhereClause ::= 'WHERE'? GroupGraphPattern '''
     def where_clause(self, tokens: LookaheadQueue, where_clause: WhereClause) -> WhereClause:
         next_tok: Token = tokens.get_now()
         if next_tok.term is QueryTerm.WHERE:
@@ -210,26 +217,38 @@ class QueryParser:
         # TODO: Logic to check if we should call .group_graph_pattern() again
         return where_clause
     
-    def group_graph_pattern(self, tokens: LookaheadQueue) -> GroupGraphPattern:
+    '''GroupGraphPattern ::= '{' GroupGraphPattern* (SubSelect | GroupGraphPatternSub)? '}' '''
+    def group_graph_pattern(self, tokens: LookaheadQueue, encloser: GroupGraphPattern.Enclosers) -> GroupGraphPattern:
         ggp_sub_terms: List[QueryTerm] = [QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX,
                                           QueryTerm.GRAPH, QueryTerm.OPTIONAL]
+        expected: List[QueryTerm] = ggp_sub_terms + [QueryTerm.LBRACKET, QueryTerm.SELECT, QueryTerm.RBRACKET]
+        ggp: GroupGraphPattern = GroupGraphPattern(encloser)
         assert tokens.get_now().term is QueryTerm.LBRACKET
+        while tokens.lookahead().term is QueryTerm.LBRACKET:
+            ggp.add_ggp(self.group_graph_pattern(tokens, GroupGraphPattern.Enclosers.NO_ENCLOSER))
+
         if tokens.lookahead().term is QueryTerm.SELECT:
-            self.subselect(tokens)
+            ggp.set_sub_select(self.subselect(tokens))
+            expected = [QueryTerm.RBRACKET]
         elif tokens.lookahead().term in ggp_sub_terms:
-            self.group_graph_pattern_sub(tokens)
-        else:
-            self.throw_error([QueryTerm.SELECT] + ggp_sub_terms, tokens.lookahead())
-        assert tokens.get_now().term is QueryTerm.RBRACKET
-        return None
+            ggp.set_ggp_sub(self.group_graph_pattern_sub(tokens, GroupGraphPatternSub()))
+            expected = ggp_sub_terms + [QueryTerm.RBRACKET]
+        
+        if tokens.lookahead().term is not QueryTerm.RBRACKET:
+            self.throw_error(expected, tokens.lookahead())
+        return ggp
     
-    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp: GroupGraphPattern) -> GroupGraphPatternSub:
+    '''GroupGraphPatternSub ::= TriplesBlock? (('OPTIONAL' | 'GRAPH') '.'? TriplesBlock?)* '''
+    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> GroupGraphPatternSub:
         next_tok: Token = tokens.lookahead()
         if next_tok.term is QueryTerm.OPTIONAL:
             tokens.get_now()
-            self.group_graph_pattern(tokens)
-            return ggp
-    
+            ggp_sub.add_enclosed_ggp(self.group_graph_pattern(tokens, GroupGraphPattern.Enclosers.OPTIONAL))
+            return self.group_graph_pattern_sub(tokens, ggp_sub)
+        elif next_tok.term is QueryTerm.GRAPH:
+            tokens.get_now()
+
+    '''SubselectClause ::= tbd '''
     def subselect(self, tokens: LookaheadQueue) -> SubSelect:
         raise NotImplementedError()
     
