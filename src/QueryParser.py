@@ -261,9 +261,8 @@ class QueryParser:
     def triples_block(self, tokens: LookaheadQueue) -> TriplesBlock:
         raise NotImplementedError()
     
-    '''SubselectClause ::= tbd '''
-    # TODO: Return type likely wrong
-    def subselect(self, tokens: LookaheadQueue) -> SubSelect:
+    '''SubSelect ::= SelectClause WhereClause SolutionModifier '''
+    def sub_select(self, tokens: LookaheadQueue) -> SubSelect:
         raise NotImplementedError()
     
     def throw_error(self, expected_terms: List[QueryTerm], actual_tok: Token) -> None:
