@@ -45,8 +45,7 @@ class Function(Expression):
         self.func_name = func_name
 
     def __format__(self, format_spec):
-        arg_str: str = ", ".join(self.args)
-        return f"{self.func_name.upper()}({arg_str})"
+        self.__str__()
     
     def __str__(self):
         arg_str: str = ", ".join(self.args)
@@ -68,9 +67,7 @@ class AggregateFunction(Function):
         self.extras = extras
 
     def __format__(self, format_spec):
-        distinct: str = "DISTINCT " if self.has_distinct_flag else ""
-        arg_str: str = ", ".join(self.args)
-        return f"{self.func_name.upper()}({distinct}{arg_str}{self.extras})"
+        self.__str__()
     
     def __str__(self):
         distinct: str = "DISTINCT " if self.has_distinct_flag else ""

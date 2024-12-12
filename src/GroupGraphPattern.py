@@ -1,30 +1,18 @@
-from typing import List
-from .SelectClause import SelectClause
+from .SubSelect import SubSelect
 from .GroupGraphPatternSub import GroupGraphPatternSub
-from enum import Enum
+from .GraphPatternNotTriples import GraphPatternNotTriples
 
+class GroupGraphPattern(GraphPatternNotTriples):
 
-class GroupGraphPattern:
-
-    class Enclosers(Enum):
-        WHERE = "WHERE"
-        OPTIONAL = "OPTIONAL"
-        GRAPH = "GRAPH"
-        NO_ENCLOSER = ""
-
-    def __init__(self, enclosing_clause: Enclosers):
-        self.enclosing_clause: GroupGraphPattern.Enclosers = enclosing_clause
-        self.ggp_list: List[GroupGraphPattern] = []
+    def __init__(self):
+        super().__init__()
         self.ggp_sub: GroupGraphPatternSub = None
-        self.sub_select: SelectClause = None
+        self.sub_select: SubSelect = None
     
     def set_ggp_sub(self, ggp_sub: GroupGraphPatternSub) -> None:
         self.sub_select = None
         self.ggp_sub = ggp_sub
 
-    def set_sub_select(self, sub_select: SelectClause) -> None:
+    def set_sub_select(self, sub_select: SubSelect) -> None:
         self.ggp_sub = None
         self.sub_select = sub_select
-
-    def add_ggp(self, ggp: 'GroupGraphPattern') -> None:
-        self.ggp_list.append(ggp)
