@@ -83,12 +83,12 @@ class ServiceGraphPattern(GraphPatternNotTriples):
 
 class Filter(GraphPatternNotTriples):
 
-    def __init__(self, func: Function):
+    def __init__(self, expr: Expression):
         super().__init__()
-        self.func: Function = func
+        self.expr: Expression = expr
 
     def __str__(self):
-        return f"FILTER {self.func}"
+        return f"FILTER {self.expr}"
     
     def __format__(self, format_spec):
         return self.__str__()

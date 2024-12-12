@@ -17,7 +17,7 @@ from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
 from .Prologue import Prologue
 from .LookaheadQueue import LookaheadQueue
-from typing import List
+from typing import List, Tuple
 
 class QueryParser:
 
@@ -126,21 +126,26 @@ class QueryParser:
         else:
             self.throw_error(expected, next_tok)
 
-    ''' SelectVarList ::= (Var | '(' Expression 'AS' Var ')')+ '''
+    ''' SelectVarList ::= (Var | DerivedVar)+ '''
     def select_var_list(self, tokens: LookaheadQueue, select_clause: SelectClause) -> SelectClause:
-        next_tok: Token = tokens.get_now()
-        if next_tok.term is QueryTerm.VARIABLE:
-            select_clause.add_explicit_var(next_tok.content)    
-        elif next_tok.term is QueryTerm.LPAREN:
-            ex: Expression = self.expression(tokens)
-            assert tokens.get_now().term is QueryTerm.AS
-            var: Token = tokens.get_now()
-            assert var.term is QueryTerm.VARIABLE
-            select_clause.set_derived_var(var.content, ex)
-            assert tokens.get_now().term is QueryTerm.RPAREN
+        if tokens.lookahead().term is QueryTerm.VARIABLE:
+            select_clause.add_explicit_var(tokens.get_now().content)
+        elif tokens.lookahead().term is QueryTerm.LPAREN:
+            var, expr = self.derived_var(tokens)
+            select_clause.set_derived_var(var, expr)
         else:
-            self.throw_error([QueryTerm.VARIABLE, QueryTerm.LPAREN], next_tok)
+            self.throw_error([QueryTerm.VARIABLE, QueryTerm.LPAREN], tokens.lookahead())
         return select_clause
+    
+    ''' DerivedVar ::= '(' Expression 'AS' Var ')' '''
+    def derived_var(self, tokens: LookaheadQueue) -> Tuple[str, Expression]:
+        assert tokens.get_now().term is QueryTerm.LPAREN
+        ex: Expression = self.expression(tokens)
+        assert tokens.get_now().term is QueryTerm.AS
+        var: Token = tokens.get_now()
+        assert var.term is QueryTerm.VARIABLE
+        assert tokens.get_now().term is QueryTerm.RPAREN
+        return (var.content, ex)
 
     ''' Expression ::= BracketedExpression | BuiltInCall | RDFLiteral | NumericLiteral | BoolLiteral | Var '''
     def expression(self, tokens: LookaheadQueue) -> Expression:
@@ -208,8 +213,32 @@ class QueryParser:
         return args
     
     '''DatasetClause ::= 'FROM' (DefaultGraphClause | NamedGraphClause) '''
-    def dataset_clause(self, tokens: LookaheadQueue, dataset_clause: DatasetClause) -> DatasetClause:
-        raise NotImplementedError()
+    def dataset_clause(self, tokens: LookaheadQueue) -> DatasetClause:
+        is_named: bool = False
+        assert tokens.get_now().term is QueryTerm.FROM
+        next_tok: Token = tokens.get_now()
+        if next_tok.term is QueryTerm.NAMED:
+            is_named = True
+            next_tok = tokens.get_now()
+        iri: str = self.iri(tokens)
+        return DatasetClause(iri, is_named)
+        
+    '''Iri ::= IRIREF | PN_PREFIX? ':' | PN_PREFIX? ':' PN_LOCAL '''
+    def iri(self, tokens: LookaheadQueue) -> str:
+        expected: List[QueryTerm] = [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        next_tok: Token = tokens.get_now()
+        if next_tok.term is QueryTerm.IRIREF:
+            return next_tok.content
+        prefix, local_name = "", ""
+        if QueryTerm.PREFIXED_NAME_PREFIX:
+            prefix = next_tok.content
+            next_tok = tokens.get_now()
+            expected = [QueryTerm.COLON]
+        if next_tok.term is not QueryTerm.COLON:
+            self.throw_error(expected, next_tok)
+        if tokens.lookahead().term is QueryTerm.PREFIXED_NAME_LOCAL:
+            local_name: str = tokens.get_now().content
+        return f"{prefix}:{local_name}"
     
     '''WhereClause ::= 'WHERE'? GroupGraphPattern '''
     def where_clause(self, tokens: LookaheadQueue) -> WhereClause:
@@ -255,7 +284,55 @@ class QueryParser:
     '''GraphPatternNotTriples ::= GroupOrUnionGraphPattern | OptionalGraphPattern | MinusGraphPattern
                                   | GraphGraphPattern | ServiceGraphPattern | Filter | Bind '''
     def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GraphPatternNotTriples:
-        raise NotImplementedError()
+        lookahead: Token = tokens.lookahead()
+        if lookahead.term is QueryTerm.OPTIONAL:
+            tokens.get_now()
+            return OptionalGraphPattern(self.group_graph_pattern(tokens))
+        elif lookahead.term is QueryTerm.MINUS:
+            tokens.get_now()
+            return MinusGraphPattern(self.group_graph_pattern(tokens))
+        elif lookahead.term is QueryTerm.GRAPH:
+            tokens.get_now()
+            if tokens.lookahead().term is QueryTerm.VARIABLE:
+                return GraphGraphPattern(tokens.get_now().content, self.group_graph_pattern(tokens))
+            else:
+                return GraphGraphPattern(self.iri(tokens), self.group_graph_pattern(tokens))
+        elif lookahead.term is QueryTerm.SERVICE:
+            tokens.get_now()
+            is_silent: bool = False
+            if tokens.lookahead().term is QueryTerm.SILENT:
+                is_silent = True
+                tokens.get_now()
+            if tokens.lookahead().term is QueryTerm.VARIABLE:
+                return ServiceGraphPattern(is_silent, tokens.get_now().content, self.group_graph_pattern(tokens))
+            else:
+                return ServiceGraphPattern(is_silent, self.iri(tokens), self.group_graph_pattern(tokens))
+        elif lookahead.term is QueryTerm.FILTER:
+            tokens.get_now()
+            return Filter(self.constraint())
+        elif lookahead.term is QueryTerm.BIND:
+            tokens.get_now()
+            var, expr = self.derived_var(tokens)
+            return Bind(expr, var)
+        elif lookahead.term is QueryTerm.LBRACKET:
+            ggp: GroupGraphPattern = self.group_graph_pattern(tokens)
+            if tokens.lookahead().term is QueryTerm.UNION:
+                tokens.get_now()
+                return UnionGraphPattern(ggp, self.group_graph_pattern(tokens))
+            else:
+                return ggp
+            
+    '''Constraint ::= '(' Expression ')' | BuiltInCall '''
+    def constraint(self, tokens: LookaheadQueue) -> Expression:
+        if tokens.lookahead().term is QueryTerm.LPAREN:
+            ex: Expression = IdentityFunction(self.expression(tokens))
+            assert tokens.get_now().term is QueryTerm.RPAREN
+            return ex
+        elif tokens.lookahead().term.value in QueryTerm.built_in_calls():
+            return self.built_in_call(tokens.get_now(), tokens)
+        else:
+            built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
+            self.throw_error([QueryTerm.LPAREN] + built_in_qts, tokens.lookahead())
     
     '''TriplesBlock ::= TriplesSameSubjectPath '''
     def triples_block(self, tokens: LookaheadQueue) -> TriplesBlock:

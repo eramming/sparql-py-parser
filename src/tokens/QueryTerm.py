@@ -45,6 +45,7 @@ class QueryTerm(Enum):
     UNION = "UNION"
     MINUS = "MINUS"
     SERVICE = "SERVICE"
+    SILENT = "SILENT"
     FILTER = "FILTER"
     BIND = "BIND"
     EOF = "EOF"
