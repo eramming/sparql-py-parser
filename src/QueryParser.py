@@ -94,19 +94,21 @@ class QueryParser:
         if expected:
             self.throw_error(expected, next_tok)
 
-    ''' SelectQuery ::= SelectClause DatasetClause* WhereClause '''
+    ''' SelectQuery ::= SelectClause DatasetClause* WhereClause SolutionModifier '''
     def select_query(self, tokens: LookaheadQueue) -> SelectQuery:
         select_query: SelectQuery = SelectQuery()
-        select_query.select_clause = self.select_clause(tokens, select_query.select_clause)
+        select_query.select_clause = self.select_clause(tokens)
         if tokens.lookahead().term is QueryTerm.FROM:
-            select_query.dataset_clause = self.dataset_clause(tokens, select_query.dataset_clause)
+            select_query.dataset_clause = self.dataset_clause(tokens)
         select_query.where_clause = self.where_clause(tokens)
+        select_query.soln_modifier = self.solution_modifier(tokens)
         return select_query
     
     ''' SelectClause ::= 'SELECT' 'DISTINCT'?
                          (SelectVarList | '*')
     '''
-    def select_clause(self, tokens: LookaheadQueue, select_clause: SelectClause) -> SelectClause:
+    def select_clause(self, tokens: LookaheadQueue) -> SelectClause:
+        select_clause: SelectClause = SelectClause()
         assert tokens.get_now().term is QueryTerm.SELECT
         expected: List[QueryTerm] = [QueryTerm.DISTINCT, QueryTerm.ASTERISK, QueryTerm.VARIABLE, QueryTerm.LPAREN]
 
@@ -340,6 +342,32 @@ class QueryParser:
     
     '''SubSelect ::= SelectClause WhereClause SolutionModifier '''
     def sub_select(self, tokens: LookaheadQueue) -> SubSelect:
+        sub_select: SubSelect = SubSelect()
+        sub_select.select_clause = self.select_clause(tokens)
+        sub_select.where_clause = self.where_clause(tokens)
+        sub_select.soln_modifier = self.solution_modifier(tokens)
+        return sub_select
+    
+    '''SolutionModifier ::= GroupClause? HavingClause? OrderClause? LimitOffsetClauses? '''
+    def solution_modifier(self, tokens: LookaheadQueue) -> SolnModifier:
+        lookahead: Token  = tokens.lookahead()
+        if lookahead.term is QueryTerm.GROUP:
+            tokens.get_now()
+            assert tokens.get_now().term is QueryTerm.BY
+            while :
+                self.group_condition()
+        elif lookahead.term is QueryTerm.HAVING:
+
+        elif lookahead.term is QueryTerm.ORDER:
+            
+        elif lookahead.term is QueryTerm.LIMIT:
+
+        elif lookahead.term is QueryTerm.OFFSET:
+
+    def group_condition(self, tokens: LookaheadQueue) -> str:
+        raise NotImplementedError()
+    
+    def order_condition(self, tokens: LookaheadQueue) -> str:
         raise NotImplementedError()
     
     def throw_error(self, expected_terms: List[QueryTerm], actual_tok: Token) -> None:
