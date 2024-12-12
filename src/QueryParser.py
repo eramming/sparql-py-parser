@@ -10,14 +10,15 @@ from .GroupGraphPatternSub import GroupGraphPatternSub
 from .GraphPatternNotTriples import OptionalGraphPattern, GraphGraphPattern, \
     MinusGraphPattern, UnionGraphPattern, Filter, Bind, ServiceGraphPattern, \
     GraphPatternNotTriples
-from .SolnModifier import SolnModifier
+from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
 from .SubSelect import SubSelect
 from .TriplesBlock import TriplesBlock
+from .TriplesSameSubj import TriplesSameSubj
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
 from .Prologue import Prologue
 from .LookaheadQueue import LookaheadQueue
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 class QueryParser:
 
@@ -337,9 +338,59 @@ class QueryParser:
             self.throw_error([QueryTerm.LPAREN] + built_in_qts, tokens.lookahead())
     
     '''TriplesBlock ::= TriplesSameSubjectPath '''
-    def triples_block(self, tokens: LookaheadQueue) -> TriplesBlock:
+    def triples_block(self, tokens: LookaheadQueue, triples_block: TriplesBlock) -> TriplesBlock:
+        trip_same_subj: TriplesSameSubj = self.triples_same_subject(tokens)
+        if trip_same_subj is None:
+            return triples_block
+        else:
+            triples_block.add_triples_same_subj(trip_same_subj)
+        if tokens.lookahead().term is QueryTerm.PERIOD:
+            tokens.get_now()
+            return self.triples_block(tokens, triples_block)
+        else:
+            return triples_block
+    
+    '''TriplesSameSubj ::= VarOrTerm PropertyListPathNotEmpty '''
+    def triples_same_subj(self, tokens: LookaheadQueue) -> TriplesSameSubj:
+        triples_same_subj: TriplesSameSubj = TriplesSameSubj(self.var_or_term(tokens))
+        triples_same_subj.add_po(self.property_list_path_not_empty(tokens))
+        return triples_same_subj
+    
+    '''VarOrTerm ::= Var | iri | StringLiteral | NumericLiteral | BooleanLiteral '''
+    def var_or_term(self, tokens: LookaheadQueue) -> str:
+        next_tok: Token = tokens.get_now()
+        if next_tok.term is QueryTerm.VARIABLE:
+            return f"?{next_tok.content}"
+        elif next_tok.term is QueryTerm.IRIREF:
+            return f"<{next_tok.content}>"
+        elif next_tok.term is QueryTerm.STRING_LITERAL:
+            return next_tok.content
+        elif next_tok.term is QueryTerm.NUMBER_LITERAL:
+            return next_tok.content
+        elif next_tok.term is QueryTerm.TRUE:
+            return "true"
+        elif next_tok.term is QueryTerm.TRUE:
+            return "false"
+        elif next_tok.term is QueryTerm.PREFIXED_NAME_PREFIX:
+            raise NotImplementedError()
+        else:
+            self.throw_error([QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.TRUE, QueryTerm.FALSE,
+                              QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.STRING_LITERAL,
+                              QueryTerm.NUMBER_LITERAL], next_tok)
+
+    '''PropertyListPathNotEmpty ::= ( VerbPath | Var ) ObjectListPath
+                                    ( ';' ( ( VerbPath | Var ) ObjectList )? )*'''
+    def property_list_path_not_empty(self, tokens: LookaheadQueue) -> Dict[str, List[str]]:
         raise NotImplementedError()
     
+    '''VerbPath ::= iri | 'a' | '(' Path ')' '''
+    def verb_path(self, tokens: LookaheadQueue) -> str:
+        raise NotImplementedError()
+    
+    '''ObjectListPath ::= VarOrTerm ( ',' VarOrTerm )* '''
+    def object_list_path(self, tokens: LookaheadQueue) -> str:
+        raise NotImplementedError()
+
     '''SubSelect ::= SelectClause WhereClause SolutionModifier '''
     def sub_select(self, tokens: LookaheadQueue) -> SubSelect:
         sub_select: SubSelect = SubSelect()
@@ -350,25 +401,93 @@ class QueryParser:
     
     '''SolutionModifier ::= GroupClause? HavingClause? OrderClause? LimitOffsetClauses? '''
     def solution_modifier(self, tokens: LookaheadQueue) -> SolnModifier:
-        lookahead: Token  = tokens.lookahead()
+        modifier: SolnModifier = SolnModifier()
+        lookahead: Token = tokens.lookahead()
         if lookahead.term is QueryTerm.GROUP:
             tokens.get_now()
             assert tokens.get_now().term is QueryTerm.BY
-            while :
-                self.group_condition()
-        elif lookahead.term is QueryTerm.HAVING:
+            modifier.group_clause = self.group_condition(tokens, GroupClause())
+        if lookahead.term is QueryTerm.HAVING:
+            tokens.get_now()
+            modifier.having_clause = self.having_condition(tokens, HavingClause())
+        if lookahead.term is QueryTerm.ORDER:
+            tokens.get_now()
+            assert tokens.get_now().term is QueryTerm.BY
+            modifier.order_clause = self.order_condition(tokens, OrderClause())
+        if lookahead.term in [QueryTerm.LIMIT, QueryTerm.OFFSET]:
+            modifier.limit_offset_clause = self.limit_offset_condition(tokens)
+        return modifier
 
-        elif lookahead.term is QueryTerm.ORDER:
-            
-        elif lookahead.term is QueryTerm.LIMIT:
-
-        elif lookahead.term is QueryTerm.OFFSET:
-
-    def group_condition(self, tokens: LookaheadQueue) -> str:
-        raise NotImplementedError()
+    def group_condition(self, tokens: LookaheadQueue, group_clause: GroupClause) -> GroupClause:
+        lookahead: Token = tokens.lookahead()
+        if lookahead.term is QueryTerm.VARIABLE:
+            group_clause.add_var(tokens.get_now().content)
+            self.group_condition(tokens, group_clause)
+        elif lookahead.term is QueryTerm.LPAREN:
+            var, expr = self.derived_var(tokens)
+            group_clause.add_derived_var(var, expr)
+            self.group_condition(tokens, group_clause)
+        elif lookahead.term.value in QueryTerm.built_in_calls():
+            group_clause.add_built_in_call(self.built_in_call(tokens.get_now().term, tokens))
+            self.group_condition(tokens, group_clause)
+        elif group_clause.is_empty():
+            built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
+            self.throw_error([QueryTerm.VARIABLE, QueryTerm.LPAREN] + built_in_qts, lookahead)
+        return group_clause
     
-    def order_condition(self, tokens: LookaheadQueue) -> str:
-        raise NotImplementedError()
+    def having_condition(self, tokens: LookaheadQueue, having_clause: HavingClause) -> HavingClause:
+        having_clause.add_expr(self.constraint(tokens))
+        built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
+        while tokens.lookahead().term in [QueryTerm.LPAREN] + built_in_qts:
+            having_clause.add_expr(self.constraint(tokens))
+
+    def order_condition(self, tokens: LookaheadQueue, order_clause: OrderClause) -> OrderClause:
+        lookahead: Token = tokens.lookahead()
+        if lookahead.term is QueryTerm.VARIABLE:
+            order_clause.add_expr(TerminalExpr(tokens.get_now().content))
+            self.order_condition(tokens, order_clause)
+        elif lookahead.term is QueryTerm.ASC:
+            tokens.get_now()
+            assert tokens.get_now().term is QueryTerm.LPAREN
+            order_clause.add_expr(Function("ASC", self.expression(tokens)))
+            assert tokens.get_now().term is QueryTerm.RPAREN
+            self.order_condition(tokens, order_clause)
+        elif lookahead.term is QueryTerm.DESC:
+            tokens.get_now()
+            assert tokens.get_now().term is QueryTerm.LPAREN
+            order_clause.add_expr(Function("DESC", self.expression(tokens)))
+            assert tokens.get_now().term is QueryTerm.RPAREN
+            self.order_condition(tokens, order_clause)
+        elif lookahead.term.value in QueryTerm.built_in_calls():
+            order_clause.add_expr(self.built_in_call(tokens.get_now().term, tokens))
+            self.order_condition(tokens, order_clause)
+        elif order_clause.is_empty():
+            built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
+            self.throw_error(built_in_qts + [QueryTerm.LPAREN, QueryTerm.VARIABLE, QueryTerm.ASC, QueryTerm.DESC], lookahead)
+        return order_clause
+
+    def limit_offset_condition(self, tokens: LookaheadQueue) -> LimitOffsetClause:
+        next_tok: Token = tokens.get_now()
+        if next_tok.term is QueryTerm.LIMIT:
+            limit_int: Token = tokens.get_now()
+            assert limit_int.term is QueryTerm.NUMBER_LITERAL
+            if tokens.lookahead().term is QueryTerm.OFFSET:
+                tokens.get_now()
+                offset_int: Token = tokens.get_now()
+                assert offset_int.term is QueryTerm.NUMBER_LITERAL
+                return LimitOffsetClause(int(limit_int.content), int(offset_int.content), True)
+            else:
+                return LimitOffsetClause(int(limit_int.content), None, True)
+        elif next_tok.term is QueryTerm.OFFSET:
+            offset_int: Token = tokens.get_now()
+            assert offset_int.term is QueryTerm.NUMBER_LITERAL
+            if tokens.lookahead().term is QueryTerm.LIMIT:
+                tokens.get_now()
+                limit_int: Token = tokens.get_now()
+                assert limit_int.term is QueryTerm.NUMBER_LITERAL
+                return LimitOffsetClause(int(limit_int.content), int(offset_int.content), False)
+            else:
+                return LimitOffsetClause(None, int(offset_int.content), False)
     
     def throw_error(self, expected_terms: List[QueryTerm], actual_tok: Token) -> None:
         raise ValueError(f"Expected {', '.join([term.name for term in expected_terms])} "

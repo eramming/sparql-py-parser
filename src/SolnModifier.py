@@ -33,6 +33,9 @@ class GroupClause:
     def add_var(self, var: str) -> None:
         self.vars.append(var)
 
+    def is_empty(self) -> bool:
+        return len(self.built_in_calls) + len(self.derived_vars) + len(self.vars) == 0
+
     def __str__(self):
         output: str = (f"GROUP BY {' '.join(self.built_in_calls)} "
                        f"{' '.join(self.derived_vars)} "
@@ -65,6 +68,9 @@ class OrderClause:
 
     def add_expr(self, expr: Expression) -> None:
         self.expr.append(expr)
+
+    def is_empty(self) -> bool:
+        return len(self.expr) == 0
 
     def __str__(self):
         return f"ORDER BY {' '.join(self.expr)}"
