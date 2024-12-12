@@ -8,9 +8,11 @@ from .ExprOp import ExprOp
 from .GroupGraphPattern import GroupGraphPattern
 from .GroupGraphPatternSub import GroupGraphPatternSub
 from .GraphPatternNotTriples import OptionalGraphPattern, GraphGraphPattern, \
-    MinusGraphPattern, UnionGraphPattern, Filter, Bind, ServiceGraphPattern
+    MinusGraphPattern, UnionGraphPattern, Filter, Bind, ServiceGraphPattern, \
+    GraphPatternNotTriples
 from .SolnModifier import SolnModifier
 from .SubSelect import SubSelect
+from .TriplesBlock import TriplesBlock
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
 from .Prologue import Prologue
@@ -217,55 +219,46 @@ class QueryParser:
         ggp: GroupGraphPattern = self.group_graph_pattern(tokens)
         return WhereClause(ggp)
     
-    '''old way:
-    GroupGraphPattern ::= '{' GroupGraphPattern* (SubSelect | GroupGraphPatternSub)? '}'
-    new way:
-    GroupGraphPattern ::= '{' ( SubSelect | GroupGraphPatternSub ) '}' '''
-    def group_graph_pattern(self, tokens: LookaheadQueue, encloser: GroupGraphPattern.Enclosers) -> GroupGraphPattern:
-        ggp_sub_terms: List[QueryTerm] = [QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX,
-                                          QueryTerm.GRAPH, QueryTerm.OPTIONAL]
-        expected: List[QueryTerm] = ggp_sub_terms + [QueryTerm.LBRACKET, QueryTerm.SELECT, QueryTerm.RBRACKET]
-        ggp: GroupGraphPattern = GroupGraphPattern(encloser)
+    ''' GroupGraphPattern ::= '{' ( SubSelect | GroupGraphPatternSub ) '}' '''
+    def group_graph_pattern(self, tokens: LookaheadQueue) -> GroupGraphPattern:
+        ggp: GroupGraphPattern = GroupGraphPattern()
         assert tokens.get_now().term is QueryTerm.LBRACKET
-        while tokens.lookahead().term is QueryTerm.LBRACKET:
-            ggp.add_ggp(self.group_graph_pattern(tokens, GroupGraphPattern.Enclosers.NO_ENCLOSER))
 
         if tokens.lookahead().term is QueryTerm.SELECT:
             ggp.set_sub_select(self.subselect(tokens))
-            expected = [QueryTerm.RBRACKET]
-        elif tokens.lookahead().term in ggp_sub_terms:
+        else:
             ggp.set_ggp_sub(self.group_graph_pattern_sub(tokens, GroupGraphPatternSub()))
-            expected = ggp_sub_terms + [QueryTerm.RBRACKET]
-        
-        if tokens.lookahead().term is not QueryTerm.RBRACKET:
-            self.throw_error(expected, tokens.lookahead())
+        assert tokens.get_now().term is QueryTerm.LBRACKET
         return ggp
     
-    '''GroupGraphPatternSub ::= TriplesBlock? (('OPTIONAL' | 'GRAPH') '.'? TriplesBlock?)* '''
     '''GroupGraphPatternSub ::= TriplesBlock? (GraphPatternNotTriples '.'? TriplesBlock?)* '''
-    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> GroupGraphPatternSub:
+    def group_graph_pattern_sub(self, tokens: LookaheadQueue) -> GroupGraphPatternSub:
+        ggp_sub: GroupGraphPatternSub = GroupGraphPatternSub()
         next_tok: Token = tokens.lookahead()
+        triples_block_terms: List[QueryTerm] = [
+            QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
+            QueryTerm.NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE, QueryTerm.FALSE]
+        not_triples_terms: List[QueryTerm] = [
+            QueryTerm.OPTIONAL, QueryTerm.GRAPH, QueryTerm.SELECT, QueryTerm.MINUS,
+            QueryTerm.UNION, QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE]
         
-        if next_tok.term in [QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
-                             QueryTerm.NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE,
-                             QueryTerm.FALSE]:
+        if next_tok.term in triples_block_terms:
             ggp_sub.add_triple_block(self.triples_block(tokens))
-            return self.group_graph_pattern_sub(tokens, ggp_sub)
-        elif next_tok.term in [QueryTerm.OPTIONAL, QueryTerm.GRAPH, QueryTerm.SELECT, QueryTerm.MINUS,
-                               QueryTerm.UNION, QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE]:
-            tokens.get_now()
-            ggp_sub.add_other_pattern(self.group_graph_pattern(tokens, GroupGraphPattern.Enclosers.OPTIONAL))
-            return self.group_graph_pattern_sub(tokens, ggp_sub)
-        elif next_tok.term is QueryTerm.GRAPH:
-            tokens.get_now()
-            var_or_iri: Token = tokens.get_now()
-            assert
-        else:
-            return ggp_sub
+        while next_tok.term in not_triples_terms:
+            ggp_sub.add_other_pattern(self.graph_pattern_not_triples(tokens))
+            if next_tok.term is QueryTerm.PERIOD:
+                tokens.get_now()
+            if next_tok.term in triples_block_terms:
+                ggp_sub.add_triple_block(self.triples_block(tokens))
+        return ggp_sub
 
     '''GraphPatternNotTriples ::= GroupOrUnionGraphPattern | OptionalGraphPattern | MinusGraphPattern
                                   | GraphGraphPattern | ServiceGraphPattern | Filter | Bind '''
-    def graph_pattern_not_triples(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> GroupGraphPatternSub:
+    def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GraphPatternNotTriples:
+        raise NotImplementedError()
+    
+    '''TriplesBlock ::= TriplesSameSubjectPath '''
+    def triples_block(self, tokens: LookaheadQueue) -> TriplesBlock:
         raise NotImplementedError()
     
     '''SubselectClause ::= tbd '''
