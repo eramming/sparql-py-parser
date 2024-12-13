@@ -27,6 +27,7 @@ class QueryTerm(Enum):
     SELECT = "SELECT"
     ASTERISK = "*"
     VARIABLE = "VARIABLE"
+    A = "A"
     WHERE = "WHERE"
     SEMI_COLON = ";"
     PERIOD = "."

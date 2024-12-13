@@ -1,18 +1,18 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set
 from collections import defaultdict
+from .Verbs import Verb
 
 class TriplesSameSubj:
 
     def __init__(self, subj: str):
         self.subj: str = subj
-        self.po: Dict[str, List[str]] = defaultdict(list)
+        self.po_dict: Dict[Verb, Set[str]] = defaultdict(set)
 
-    def add_p_with_o_list(self, p: str, many_o: List[str]) -> None:
-        self.po[p] += many_o
+    def add_po_dict(self, po_dict: Dict[Verb, List[str]]) -> None:
+        self.po_dict.update(po_dict)
 
-    def add_po(self, p: str, o: str) -> None:
-        self.po[p].append(o)
+    def add_p_with_many_o(self, p: Verb, many_o: Set[str]) -> None:
+        self.po_dict[p].union(many_o)
 
-    def add_po_list(self, many_po: List[Tuple[str, str]]) -> None:
-        for (p, o) in many_po:
-            self.po[p].append(o)
+    def add_po(self, p: Verb, o: str) -> None:
+        self.po_dict[p].add(o)

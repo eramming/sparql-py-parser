@@ -14,11 +14,12 @@ from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, 
 from .SubSelect import SubSelect
 from .TriplesBlock import TriplesBlock
 from .TriplesSameSubj import TriplesSameSubj
+from .Verbs import Verb, VerbPath, VarVerb
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
 from .Prologue import Prologue
 from .LookaheadQueue import LookaheadQueue
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Set
 
 class QueryParser:
 
@@ -339,21 +340,19 @@ class QueryParser:
     
     '''TriplesBlock ::= TriplesSameSubjectPath '''
     def triples_block(self, tokens: LookaheadQueue, triples_block: TriplesBlock) -> TriplesBlock:
-        trip_same_subj: TriplesSameSubj = self.triples_same_subject(tokens)
-        if trip_same_subj is None:
-            return triples_block
-        else:
-            triples_block.add_triples_same_subj(trip_same_subj)
+        triples_block.add_triples_same_subj(self.triples_same_subj(tokens))
         if tokens.lookahead().term is QueryTerm.PERIOD:
             tokens.get_now()
-            return self.triples_block(tokens, triples_block)
-        else:
-            return triples_block
+            if tokens.lookahead().term in [QueryTerm.VARIABLE, QueryTerm.IRIREF,
+                                           QueryTerm.STRING_LITERAL, QueryTerm.NUMBER_LITERAL,
+                                           QueryTerm.TRUE, QueryTerm.FALSE, QueryTerm.PREFIXED_NAME_PREFIX]:
+                self.triples_block(tokens, triples_block)
+        return triples_block
     
     '''TriplesSameSubj ::= VarOrTerm PropertyListPathNotEmpty '''
     def triples_same_subj(self, tokens: LookaheadQueue) -> TriplesSameSubj:
         triples_same_subj: TriplesSameSubj = TriplesSameSubj(self.var_or_term(tokens))
-        triples_same_subj.add_po(self.property_list_path_not_empty(tokens))
+        triples_same_subj.add_po_dict(self.property_list_path_not_empty(tokens))
         return triples_same_subj
     
     '''VarOrTerm ::= Var | iri | StringLiteral | NumericLiteral | BooleanLiteral '''
@@ -361,35 +360,73 @@ class QueryParser:
         next_tok: Token = tokens.get_now()
         if next_tok.term is QueryTerm.VARIABLE:
             return f"?{next_tok.content}"
-        elif next_tok.term is QueryTerm.IRIREF:
-            return f"<{next_tok.content}>"
         elif next_tok.term is QueryTerm.STRING_LITERAL:
             return next_tok.content
         elif next_tok.term is QueryTerm.NUMBER_LITERAL:
             return next_tok.content
         elif next_tok.term is QueryTerm.TRUE:
             return "true"
-        elif next_tok.term is QueryTerm.TRUE:
+        elif next_tok.term is QueryTerm.FALSE:
             return "false"
-        elif next_tok.term is QueryTerm.PREFIXED_NAME_PREFIX:
-            raise NotImplementedError()
+        elif next_tok.term in [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]:
+            return self.iri(tokens)
         else:
             self.throw_error([QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.TRUE, QueryTerm.FALSE,
                               QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.STRING_LITERAL,
                               QueryTerm.NUMBER_LITERAL], next_tok)
 
-    '''PropertyListPathNotEmpty ::= ( VerbPath | Var ) ObjectListPath
+    '''PropertyListPathNotEmpty ::= ( VerbPath | Var ) ObjectList
                                     ( ';' ( ( VerbPath | Var ) ObjectList )? )*'''
-    def property_list_path_not_empty(self, tokens: LookaheadQueue) -> Dict[str, List[str]]:
-        raise NotImplementedError()
+    def property_list_path_not_empty(self, tokens: LookaheadQueue) -> Dict[Verb, Set[str]]:
+        pred_to_objs: Dict[Verb, Set[str]] = {}
+        verb, objs = self.property_list_path_not_empty_helper(tokens)
+        pred_to_objs[verb] = objs
+
+        verb_starters: List[QueryTerm] = [
+            QueryTerm.VARIABLE, QueryTerm.LPAREN, QueryTerm.A, QueryTerm.IRIREF,
+            QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        while tokens.lookahead().term is QueryTerm.SEMI_COLON:
+            tokens.get_now()
+            # Verb/Obj_list logic:
+            if tokens.lookahead().term in verb_starters:
+                verb, objs = self.property_list_path_not_empty_helper(tokens)
+                pred_to_objs[verb].union(objs)
+        return pred_to_objs
     
+    def property_list_path_not_empty_helper(self, tokens: LookaheadQueue) -> Tuple[Verb, Set[str]]:
+        verb_path_starters: List[QueryTerm] = [
+            QueryTerm.LPAREN, QueryTerm.A, QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        verb: Verb = None
+        if tokens.lookahead().term is QueryTerm.VARIABLE:
+            verb = VarVerb(tokens.get_now().content)
+        elif tokens.lookahead().term in verb_path_starters:
+            verb = self.verb_path(tokens)
+        else:
+            self.throw_error([QueryTerm.VARIABLE] + verb_path_starters, tokens.lookahead())
+        objs = self.object_list(tokens)
+        return (verb, objs)
+        
     '''VerbPath ::= iri | 'a' | '(' Path ')' '''
-    def verb_path(self, tokens: LookaheadQueue) -> str:
-        raise NotImplementedError()
+    def verb_path(self, tokens: LookaheadQueue) -> VerbPath:
+        iri_terms: List[QueryTerm] = [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        next_tok: Token = tokens.get_now()
+        if next_tok.term is QueryTerm.A:
+            return VerbPath(verb="a")
+        elif next_tok.term in iri_terms:
+            return VerbPath(verb=self.iri(tokens))
+        elif next_tok.term is QueryTerm.LPAREN:
+            vp: VerbPath = VerbPath(verb_path=self.verb_path(tokens))
+            assert tokens.get_now().term is QueryTerm.RPAREN
+            return vp
+        self.throw_error([QueryTerm.A, QueryTerm.LPAREN] + iri_terms, next_tok)
     
     '''ObjectListPath ::= VarOrTerm ( ',' VarOrTerm )* '''
-    def object_list_path(self, tokens: LookaheadQueue) -> str:
-        raise NotImplementedError()
+    def object_list(self, tokens: LookaheadQueue) -> Set[str]:
+        objs: Set[str] = set(self.var_or_term(tokens))
+        while tokens.lookahead().term is QueryTerm.COMMA:
+            tokens.get_now()
+            objs.add(self.var_or_term(tokens))
+        return objs
 
     '''SubSelect ::= SelectClause WhereClause SolutionModifier '''
     def sub_select(self, tokens: LookaheadQueue) -> SubSelect:
@@ -463,7 +500,8 @@ class QueryParser:
             self.order_condition(tokens, order_clause)
         elif order_clause.is_empty():
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
-            self.throw_error(built_in_qts + [QueryTerm.LPAREN, QueryTerm.VARIABLE, QueryTerm.ASC, QueryTerm.DESC], lookahead)
+            self.throw_error(built_in_qts + [QueryTerm.LPAREN, QueryTerm.VARIABLE, QueryTerm.ASC, QueryTerm.DESC],
+                             lookahead)
         return order_clause
 
     def limit_offset_condition(self, tokens: LookaheadQueue) -> LimitOffsetClause:
