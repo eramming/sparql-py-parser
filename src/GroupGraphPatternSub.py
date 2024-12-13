@@ -1,7 +1,6 @@
 from typing import Dict, List
-from .TriplesBlock import TriplesBlock
-from .GroupGraphPattern import GroupGraphPattern
-from .GraphPatternNotTriples import GraphPatternNotTriples
+from TriplesBlock import TriplesBlock
+from GraphPatternNotTriples import GraphPatternNotTriples
 
 class GroupGraphPatternSub:
 

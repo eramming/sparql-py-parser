@@ -1,5 +1,5 @@
 from typing import List
-from .TriplesSameSubj import TriplesSameSubj
+from TriplesSameSubj import TriplesSameSubj
 
 class TriplesBlock:
 

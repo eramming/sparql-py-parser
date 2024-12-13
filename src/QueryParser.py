@@ -1,24 +1,24 @@
-from .tokens import QueryTerm, Token
-from .Query import Query
-from .SelectQuery import SelectQuery
-from .SelectClause import SelectClause
-from .Expressions import Expression, IdentityFunction, MultiExprExpr, \
+from tokens import QueryTerm, Token
+from Query import Query
+from SelectQuery import SelectQuery
+from SelectClause import SelectClause
+from Expressions import Expression, IdentityFunction, MultiExprExpr, \
     Function, AggregateFunction, NegationExpr, ExistenceExpr, TerminalExpr
-from .ExprOp import ExprOp
-from .GroupGraphPattern import GroupGraphPattern
-from .GroupGraphPatternSub import GroupGraphPatternSub
-from .GraphPatternNotTriples import OptionalGraphPattern, GraphGraphPattern, \
+from ExprOp import ExprOp
+from GroupGraphPattern import GroupGraphPattern
+from GroupGraphPatternSub import GroupGraphPatternSub
+from GraphPatternNotTriples import OptionalGraphPattern, GraphGraphPattern, \
     MinusGraphPattern, UnionGraphPattern, Filter, Bind, ServiceGraphPattern, \
     GraphPatternNotTriples
-from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
-from .SubSelect import SubSelect
-from .TriplesBlock import TriplesBlock
-from .TriplesSameSubj import TriplesSameSubj
-from .Verbs import Verb, VerbPath, VarVerb
-from .DatasetClause import DatasetClause
-from .WhereClause import WhereClause
-from .Prologue import Prologue
-from .LookaheadQueue import LookaheadQueue
+from SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
+from SubSelect import SubSelect
+from TriplesBlock import TriplesBlock
+from TriplesSameSubj import TriplesSameSubj
+from Verbs import Verb, VerbPath, VarVerb
+from DatasetClause import DatasetClause
+from WhereClause import WhereClause
+from Prologue import Prologue
+from LookaheadQueue import LookaheadQueue
 from typing import List, Tuple, Dict, Set
 
 class QueryParser:

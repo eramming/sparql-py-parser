@@ -1,6 +1,6 @@
-from .SelectClause import SelectClause
-from .WhereClause import WhereClause
-from .SolnModifier import SolnModifier
+from SelectClause import SelectClause
+from WhereClause import WhereClause
+from SolnModifier import SolnModifier
 
 
 class SubSelect:

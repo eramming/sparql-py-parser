@@ -1,8 +1,9 @@
-from .SubSelect import SubSelect
-from .GroupGraphPatternSub import GroupGraphPatternSub
-from .GraphPatternNotTriples import GraphPatternNotTriples
+from SubSelect import SubSelect
+from GroupGraphPatternSub import GroupGraphPatternSub
+import GraphPatternNotTriples
 
-class GroupGraphPattern(GraphPatternNotTriples):
+
+class GroupGraphPattern(GraphPatternNotTriples.GraphPatternNotTriples):
 
     def __init__(self):
         super().__init__()

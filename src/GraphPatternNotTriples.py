@@ -1,8 +1,5 @@
-from .SelectClause import SelectClause
-from .WhereClause import WhereClause
-from .SolnModifier import SolnModifier
-from .GroupGraphPattern import GroupGraphPattern
-from .Expressions import Function, Expression
+from GroupGraphPattern import GroupGraphPattern
+from Expressions import Expression
 from uuid import uuid4
 
 class GraphPatternNotTriples:

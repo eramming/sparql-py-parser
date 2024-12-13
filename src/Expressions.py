@@ -1,7 +1,7 @@
-from .GroupGraphPattern import GroupGraphPattern
-from .ExprOp import ExprOp
+from ExprOp import ExprOp
 from typing import List
 from uuid import uuid4
+import GroupGraphPattern
 
 class Expression:
     def __init__(self) -> None:
@@ -83,9 +83,9 @@ class IdentityFunction(Function):
 
 class ExistenceExpr(Expression):
 
-    def __init__(self, pattern: GroupGraphPattern, not_exists: bool = False):
+    def __init__(self, pattern: GroupGraphPattern.GroupGraphPattern, not_exists: bool = False):
         super().__init__()
-        self.pattern: GroupGraphPattern = pattern
+        self.pattern: GroupGraphPattern.GroupGraphPattern = pattern
         self.not_exists: bool = not_exists
 
 # Covers Booleans, Numbers, Strings, Irirefs, Variables
