@@ -274,15 +274,33 @@ class QueryParser:
         if lookahead.term in triples_block_terms:
             ggp.add_triples_block(self.triples_block(tokens))
         while lookahead.term in not_triples_terms:
-            self.graph_pattern_not_triples(tokens, ggp)
+            if lookahead.term in [QueryTerm.FILTER, QueryTerm.BIND]:
+                ggp.add_modifier(self.pattern_modifier(tokens))
+            else:
+                ggp.add_pattern(self.graph_pattern_not_triples(tokens))
             if lookahead.term is QueryTerm.PERIOD:
                 tokens.get_now()
             if lookahead.term in triples_block_terms:
                 ggp.add_triples_block(self.triples_block(tokens))
 
+    '''PatternModifier ::=  Filter | Bind '''
+    def pattern_modifier(self, tokens: LookaheadQueue) -> PatternModifier:
+        lookahead: Token = tokens.lookahead()
+        modifier: PatternModifier = None
+        if lookahead.term is QueryTerm.FILTER:
+            tokens.get_now()
+            modifier = Filter(self.constraint())
+        elif lookahead.term is QueryTerm.BIND:
+            tokens.get_now()
+            var, expr = self.derived_var(tokens)
+            modifier = Bind(expr, var)
+        else:
+            self.throw_error([QueryTerm.FILTER, QueryTerm.BIND], lookahead)
+        return modifier
+    
     '''GraphPatternNotTriples ::= GroupOrUnionGraphPattern | OptionalGraphPattern | MinusGraphPattern
-                                  | GraphGraphPattern | ServiceGraphPattern | Filter | Bind '''
-    def graph_pattern_not_triples(self, tokens: LookaheadQueue, ggp: GroupGraphPattern) -> GraphPatternNotTriples:
+                                  | GraphGraphPattern | ServiceGraphPattern '''
+    def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GroupGraphPattern:
         lookahead: Token = tokens.lookahead()
         if lookahead.term is QueryTerm.OPTIONAL:
             tokens.get_now()
@@ -303,27 +321,22 @@ class QueryParser:
                 is_silent = True
                 tokens.get_now()
             if tokens.lookahead().term is QueryTerm.VARIABLE:
-                ggp.add_pattern(self.group_graph_pattern(
-                    tokens, ServiceGraphPattern(is_silent, tokens.get_now().content)))
+                return self.group_graph_pattern(
+                    tokens, ServiceGraphPattern(is_silent, tokens.get_now().content))
             else:
-                ggp.add_pattern(self.group_graph_pattern(
-                    tokens, ServiceGraphPattern(is_silent, self.iri(tokens))))
-        elif lookahead.term is QueryTerm.FILTER:
-            tokens.get_now()
-            ggp.add_modifier(Filter(self.constraint()))
-        elif lookahead.term is QueryTerm.BIND:
-            tokens.get_now()
-            var, expr = self.derived_var(tokens)
-            ggp.add_modifier(Bind(expr, var))
+                return self.group_graph_pattern(
+                    tokens, ServiceGraphPattern(is_silent, self.iri(tokens)))
         elif lookahead.term is QueryTerm.LBRACKET:
             unioned_ggp: List[GroupGraphPattern] = [self.group_graph_pattern(tokens)]
             while tokens.lookahead().term is QueryTerm.UNION:
                 tokens.get_now()
                 unioned_ggp.append(self.group_graph_pattern(tokens))
             if len(unioned_ggp) > 1:
-                ggp.add_pattern(UnionGraphPattern(patterns=unioned_ggp))
+                return UnionGraphPattern(patterns=unioned_ggp)
             else:
-                ggp.add_pattern(unioned_ggp[0])
+                return unioned_ggp[0]
+        self.throw_error([QueryTerm.LBRACKET, QueryTerm.SERVICE, QueryTerm.GRAPH, QueryTerm.MINUS,
+                          QueryTerm.OPTIONAL], lookahead.term)
             
     '''Constraint ::= '(' Expression ')' | BuiltInCall '''
     def constraint(self, tokens: LookaheadQueue) -> Expression:
