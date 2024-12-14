@@ -14,28 +14,23 @@ class Expression:
         if isinstance(value, Expression):
             return value._id == self._id
         return False
-    
-class SelectExpr(Expression):
-
-    def __init__(self):
-        super().__init__()
 
 
 # Covers Booleans, Numbers, Strings, Irirefs, Variables
-class TerminalExpr(SelectExpr):
+class TerminalExpr(Expression):
 
     def __init__(self, stringified_val: str):
         super().__init__()
         self.stringified_val: str = stringified_val
 
-class NegationExpr(SelectExpr):
+class NegationExpr(Expression):
 
     def __init__(self, expr: Expression):
         super().__init__()
         self.expr: Expression = expr
 
 
-class MultiExprExpr(SelectExpr):
+class MultiExprExpr(Expression):
 
     def __init__(self, l_expr: Expression, r_expr: Expression, expr_op: ExprOp):
         super().__init__()
@@ -44,7 +39,7 @@ class MultiExprExpr(SelectExpr):
         self.expr_op: ExprOp = expr_op
 
 
-class Function(SelectExpr):
+class Function(Expression):
 
     def __init__(self, func_name: str = None, args: List[Expression] = []):
         super().__init__()
