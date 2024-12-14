@@ -310,7 +310,7 @@ class QueryParser:
     
     '''GraphPatternNotTriples ::= GroupOrUnionGraphPattern | OptionalGraphPattern | MinusGraphPattern
                                   | GraphGraphPattern | ServiceGraphPattern '''
-    def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GroupGraphPatternSub:
+    def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GroupGraphPattern:
         lookahead: Token = tokens.lookahead()
         if lookahead.term is QueryTerm.OPTIONAL:
             tokens.get_now()
