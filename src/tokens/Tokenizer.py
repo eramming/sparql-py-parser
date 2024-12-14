@@ -54,6 +54,10 @@ class Tokenizer:
         elif first_letter == "?":
             remainder: str = self.variable_tokenizer(query_str[1:], tokens)
             self.tokenize_helper(remainder, tokens)
+        elif first_letter == "!":
+            tokens.put(Token(QueryTerm.EXCLAMATION))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
         elif first_letter == ":":
             tokens.put(Token(QueryTerm.COLON))
             remainder: str = query_str[1:].lstrip()
