@@ -1,4 +1,3 @@
-from SubSelect import SubSelect
 from uuid import uuid4
 from typing import List, Dict, Any
 from TriplesBlock import TriplesBlock
@@ -7,8 +6,13 @@ from PatternModifiers import PatternModifier
 
 class GroupGraphPattern:
 
+    def __init__(self):
+        pass
+
+
+class GroupGraphPatternSub:
+
     def __init__(self, patterns: List['GroupGraphPattern'] = None):
-        self.sub_select: SubSelect = None
         self.triples_blocks: Dict[str, TriplesBlock] = {}
         self.modifiers: Dict[str, PatternModifier] = {}
         self.patterns: Dict[str, GroupGraphPattern] = {}
@@ -19,27 +23,19 @@ class GroupGraphPattern:
             self.patterns = {uuid: p for (uuid, p) in zip(self.order_of_elements, patterns)}
     
     def add_triples_block(self, triples_block: TriplesBlock) -> None:
-        self.sub_select = None
         uuid: str = uuid4()
         self.order_of_elements.append(uuid)
         self.triples_blocks[uuid] = triples_block
     
     def add_modifier(self, modifier: PatternModifier) -> None:
-        self.sub_select = None
         uuid: str = uuid4()
         self.order_of_elements.append(uuid)
         self.modifiers[uuid] = modifier
 
     def add_pattern(self, pattern: 'GroupGraphPattern') -> None:
-        self.sub_select = None
         uuid: str = uuid4()
         self.order_of_elements.append(uuid)
         self.patterns[uuid] = pattern
-
-    def set_sub_select(self, sub_select: SubSelect) -> None:
-        self.triple_blocks, self.modifiers, self.patterns = None, None, None
-        self.order_of_elements = []
-        self.sub_select = sub_select
 
     def __str__(self):
         all_elements: Dict[str, Any] = self.triple_blocks | self.modifiers | self.patterns
@@ -51,7 +47,7 @@ class GroupGraphPattern:
         return self.__str__()
 
 
-class GraphGraphPattern(GroupGraphPattern):
+class GraphGraphPattern(GroupGraphPatternSub):
 
     def __init__(self, var_or_iri: str):
         super().__init__()
@@ -64,7 +60,7 @@ class GraphGraphPattern(GroupGraphPattern):
         return self.__str__()
 
 
-class OptionalGraphPattern(GroupGraphPattern):
+class OptionalGraphPattern(GroupGraphPatternSub):
 
     def __init__(self):
         super().__init__()
@@ -76,7 +72,7 @@ class OptionalGraphPattern(GroupGraphPattern):
         return self.__str__()
     
 
-class UnionGraphPattern(GroupGraphPattern):
+class UnionGraphPattern(GroupGraphPatternSub):
 
     def __init__(self, patterns: List[GroupGraphPattern]):
         super().__init__(patterns=patterns)
@@ -87,9 +83,6 @@ class UnionGraphPattern(GroupGraphPattern):
     def add_modifier(self, modifier: PatternModifier) -> None:
         raise ValueError("Can't set PatternModifier in a UnionGraphPattern!")
 
-    def set_sub_select(self, sub_select: SubSelect) -> None:
-        raise ValueError("Can't set SubSelect in a UnionGraphPattern!")
-
     def __str__(self):
         return "UNION ".join(self.patterns)
     
@@ -97,7 +90,7 @@ class UnionGraphPattern(GroupGraphPattern):
         return self.__str__()
     
 
-class MinusGraphPattern(GroupGraphPattern):
+class MinusGraphPattern(GroupGraphPatternSub):
 
     def __init__(self):
         super().__init__()
@@ -109,7 +102,7 @@ class MinusGraphPattern(GroupGraphPattern):
         return self.__str__()
     
 
-class ServiceGraphPattern(GroupGraphPattern):
+class ServiceGraphPattern(GroupGraphPatternSub):
 
     def __init__(self, is_silent: bool, var_or_iri: str):
         super().__init__()

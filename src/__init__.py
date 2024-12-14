@@ -3,7 +3,7 @@ import sys
 from .BaseDecl import BaseDecl
 from .DatasetClause import DatasetClause
 from .PatternModifiers import PatternModifier, Bind, Filter
-from .GroupGraphPattern import GroupGraphPattern, GraphGraphPattern, OptionalGraphPattern, \
+from .GroupGraphPattern import GroupGraphPatternSub, GraphGraphPattern, OptionalGraphPattern, \
     UnionGraphPattern, ServiceGraphPattern, MinusGraphPattern
 from .Prologue import Prologue
 from .Query import Query
@@ -15,7 +15,8 @@ from .TriplesSameSubj import TriplesSameSubj
 from .WhereClause import WhereClause
 from .LookaheadQueue import LookaheadQueue
 from .Expressions import Expression, Function, IdentityFunction, TerminalExpr, \
-    ExistenceExpr, AggregateFunction
+    AggregateFunction
+from ExistenceExpr import ExistenceExpr
 from .ExprOp import ExprOp
 from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
 from .SubSelect import SubSelect

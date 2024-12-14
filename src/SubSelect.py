@@ -1,9 +1,10 @@
 from SelectClause import SelectClause
 from WhereClause import WhereClause
 from SolnModifier import SolnModifier
+from GroupGraphPattern import GroupGraphPattern
 
 
-class SubSelect:
+class SubSelect(GroupGraphPattern):
 
     def __init__(self):
         self.select_clause: SelectClause = SelectClause()
