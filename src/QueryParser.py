@@ -272,7 +272,7 @@ class QueryParser:
         return ggp_sub
     
     '''GroupGraphPatternSub ::= TriplesBlock? (GraphPatternNotTriples '.'? TriplesBlock?)* '''
-    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp: GroupGraphPatternSub) -> None:
+    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> None:
         lookahead: Token = tokens.lookahead()
         triples_block_terms: List[QueryTerm] = [
             QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
@@ -282,16 +282,16 @@ class QueryParser:
             QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE]
         
         if lookahead.term in triples_block_terms:
-            ggp.add_triples_block(self.triples_block(tokens))
+            ggp_sub.add_triples_block(self.triples_block(tokens))
         while lookahead.term in not_triples_terms:
             if lookahead.term in [QueryTerm.FILTER, QueryTerm.BIND]:
-                ggp.add_modifier(self.pattern_modifier(tokens))
+                ggp_sub.add_modifier(self.pattern_modifier(tokens))
             else:
-                ggp.add_pattern(self.graph_pattern_not_triples(tokens))
+                ggp_sub.add_pattern(self.graph_pattern_not_triples(tokens))
             if lookahead.term is QueryTerm.PERIOD:
                 tokens.get_now()
             if lookahead.term in triples_block_terms:
-                ggp.add_triples_block(self.triples_block(tokens))
+                ggp_sub.add_triples_block(self.triples_block(tokens))
 
     '''PatternModifier ::=  Filter | Bind '''
     def pattern_modifier(self, tokens: LookaheadQueue) -> PatternModifier:
@@ -337,10 +337,10 @@ class QueryParser:
                 return self.group_graph_pattern(
                     tokens, ServiceGraphPattern(is_silent, self.iri(tokens)))
         elif lookahead.term is QueryTerm.LBRACKET:
-            unioned_ggp: List[GroupGraphPatternSub] = [self.group_graph_pattern(tokens)]
+            unioned_ggp: List[GroupGraphPattern] = [self.group_graph_pattern(tokens, None)]
             while tokens.lookahead().term is QueryTerm.UNION:
                 tokens.get_now()
-                unioned_ggp.append(self.group_graph_pattern(tokens))
+                unioned_ggp.append(self.group_graph_pattern(tokens, None))
             if len(unioned_ggp) > 1:
                 return UnionGraphPattern(patterns=unioned_ggp)
             else:
