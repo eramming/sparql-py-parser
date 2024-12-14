@@ -1,7 +1,7 @@
-from .SelectClause import SelectClause
-from .DatasetClause import DatasetClause
-from .WhereClause import WhereClause
-from .SolnModifier import SolnModifier
+from SelectClause import SelectClause
+from DatasetClause import DatasetClause
+from WhereClause import WhereClause
+from SolnModifier import SolnModifier
 
 
 class SelectQuery:

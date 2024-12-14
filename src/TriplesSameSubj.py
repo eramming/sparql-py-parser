@@ -1,6 +1,6 @@
 from typing import Dict, List, Set
 from collections import defaultdict
-from .Verbs import Verb
+from Verbs import Verb
 
 class TriplesSameSubj:
 

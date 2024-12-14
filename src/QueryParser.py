@@ -1,24 +1,23 @@
-from .tokens import QueryTerm, Token
-from .Query import Query
-from .SelectQuery import SelectQuery
-from .SelectClause import SelectClause
-from .Expressions import Expression, IdentityFunction, MultiExprExpr, \
-    Function, AggregateFunction, NegationExpr, ExistenceExpr, TerminalExpr
-from .ExprOp import ExprOp
-from .GroupGraphPattern import GroupGraphPattern
-from .GroupGraphPatternSub import GroupGraphPatternSub
-from .GraphPatternNotTriples import OptionalGraphPattern, GraphGraphPattern, \
-    MinusGraphPattern, UnionGraphPattern, Filter, Bind, ServiceGraphPattern, \
-    GraphPatternNotTriples
-from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
-from .SubSelect import SubSelect
-from .TriplesBlock import TriplesBlock
-from .TriplesSameSubj import TriplesSameSubj
-from .Verbs import Verb, VerbPath, VarVerb
-from .DatasetClause import DatasetClause
-from .WhereClause import WhereClause
-from .Prologue import Prologue
-from .LookaheadQueue import LookaheadQueue
+from tokens import QueryTerm, Token
+from Query import Query
+from SelectQuery import SelectQuery
+from SelectClause import SelectClause
+from Expressions import Expression, IdentityFunction, MultiExprExpr, \
+    Function, AggregateFunction, NegationExpr, TerminalExpr
+from ExistenceExpr import ExistenceExpr
+from ExprOp import ExprOp
+from GroupGraphPattern import GroupGraphPattern, GroupGraphPatternSub, GraphGraphPattern, \
+    OptionalGraphPattern, MinusGraphPattern, ServiceGraphPattern, UnionGraphPattern
+from PatternModifiers import PatternModifier, Filter, Bind
+from SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
+from SubSelect import SubSelect
+from TriplesBlock import TriplesBlock
+from TriplesSameSubj import TriplesSameSubj
+from Verbs import Verb, VerbPath, VarVerb
+from DatasetClause import DatasetClause
+from WhereClause import WhereClause
+from Prologue import Prologue
+from LookaheadQueue import LookaheadQueue
 from typing import List, Tuple, Dict, Set
 
 class QueryParser:
@@ -249,58 +248,82 @@ class QueryParser:
         next_tok: Token = tokens.lookahead()
         if next_tok.term is QueryTerm.WHERE:
             tokens.get_now()
-        ggp: GroupGraphPattern = self.group_graph_pattern(tokens)
-        return WhereClause(ggp)
+        return WhereClause(self.group_graph_pattern(tokens, None))
     
     ''' GroupGraphPattern ::= '{' ( SubSelect | GroupGraphPatternSub ) '}' '''
-    def group_graph_pattern(self, tokens: LookaheadQueue) -> GroupGraphPattern:
-        ggp: GroupGraphPattern = GroupGraphPattern()
+    def group_graph_pattern(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> GroupGraphPattern:
         assert tokens.get_now().term is QueryTerm.LBRACKET
+        root_ggp: GroupGraphPattern = None
 
         if tokens.lookahead().term is QueryTerm.SELECT:
-            ggp.set_sub_select(self.subselect(tokens))
+            if ggp_sub is None:
+                root_ggp = self.sub_select(tokens)
+            else:
+                ggp_sub.add_pattern(self.sub_select(tokens))
         else:
-            ggp.set_ggp_sub(self.group_graph_pattern_sub(tokens, GroupGraphPatternSub()))
-        assert tokens.get_now().term is QueryTerm.LBRACKET
-        return ggp
+            if ggp_sub is None:
+                root_ggp = GroupGraphPatternSub()
+                self.group_graph_pattern_sub(tokens, root_ggp)
+            else:
+                self.group_graph_pattern_sub(tokens, ggp_sub)
+        assert tokens.get_now().term is QueryTerm.RBRACKET
+        if root_ggp:
+            return root_ggp
+        return ggp_sub
     
     '''GroupGraphPatternSub ::= TriplesBlock? (GraphPatternNotTriples '.'? TriplesBlock?)* '''
-    def group_graph_pattern_sub(self, tokens: LookaheadQueue) -> GroupGraphPatternSub:
-        ggp_sub: GroupGraphPatternSub = GroupGraphPatternSub()
-        next_tok: Token = tokens.lookahead()
+    def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> None:
+        lookahead: Token = tokens.lookahead()
         triples_block_terms: List[QueryTerm] = [
             QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
             QueryTerm.NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE, QueryTerm.FALSE]
         not_triples_terms: List[QueryTerm] = [
             QueryTerm.OPTIONAL, QueryTerm.GRAPH, QueryTerm.SELECT, QueryTerm.MINUS,
-            QueryTerm.UNION, QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE]
+            QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE]
         
-        if next_tok.term in triples_block_terms:
-            ggp_sub.add_triple_block(self.triples_block(tokens))
-        while next_tok.term in not_triples_terms:
-            ggp_sub.add_other_pattern(self.graph_pattern_not_triples(tokens))
-            if next_tok.term is QueryTerm.PERIOD:
+        if lookahead.term in triples_block_terms:
+            ggp_sub.add_triples_block(self.triples_block(tokens))
+        while lookahead.term in not_triples_terms:
+            if lookahead.term in [QueryTerm.FILTER, QueryTerm.BIND]:
+                ggp_sub.add_modifier(self.pattern_modifier(tokens))
+            else:
+                ggp_sub.add_pattern(self.graph_pattern_not_triples(tokens))
+            if lookahead.term is QueryTerm.PERIOD:
                 tokens.get_now()
-            if next_tok.term in triples_block_terms:
-                ggp_sub.add_triple_block(self.triples_block(tokens))
-        return ggp_sub
+            if lookahead.term in triples_block_terms:
+                ggp_sub.add_triples_block(self.triples_block(tokens))
 
+    '''PatternModifier ::=  Filter | Bind '''
+    def pattern_modifier(self, tokens: LookaheadQueue) -> PatternModifier:
+        lookahead: Token = tokens.lookahead()
+        modifier: PatternModifier = None
+        if lookahead.term is QueryTerm.FILTER:
+            tokens.get_now()
+            modifier = Filter(self.constraint())
+        elif lookahead.term is QueryTerm.BIND:
+            tokens.get_now()
+            var, expr = self.derived_var(tokens)
+            modifier = Bind(expr, var)
+        else:
+            self.throw_error([QueryTerm.FILTER, QueryTerm.BIND], lookahead)
+        return modifier
+    
     '''GraphPatternNotTriples ::= GroupOrUnionGraphPattern | OptionalGraphPattern | MinusGraphPattern
-                                  | GraphGraphPattern | ServiceGraphPattern | Filter | Bind '''
-    def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GraphPatternNotTriples:
+                                  | GraphGraphPattern | ServiceGraphPattern '''
+    def graph_pattern_not_triples(self, tokens: LookaheadQueue) -> GroupGraphPattern:
         lookahead: Token = tokens.lookahead()
         if lookahead.term is QueryTerm.OPTIONAL:
             tokens.get_now()
-            return OptionalGraphPattern(self.group_graph_pattern(tokens))
+            return self.group_graph_pattern(tokens, OptionalGraphPattern())
         elif lookahead.term is QueryTerm.MINUS:
             tokens.get_now()
-            return MinusGraphPattern(self.group_graph_pattern(tokens))
+            return self.group_graph_pattern(tokens, MinusGraphPattern())
         elif lookahead.term is QueryTerm.GRAPH:
             tokens.get_now()
             if tokens.lookahead().term is QueryTerm.VARIABLE:
-                return GraphGraphPattern(tokens.get_now().content, self.group_graph_pattern(tokens))
+                return self.group_graph_pattern(tokens, GraphGraphPattern(tokens.get_now().content))
             else:
-                return GraphGraphPattern(self.iri(tokens), self.group_graph_pattern(tokens))
+                return self.group_graph_pattern(tokens, GraphGraphPattern(self.iri(tokens)))
         elif lookahead.term is QueryTerm.SERVICE:
             tokens.get_now()
             is_silent: bool = False
@@ -308,23 +331,22 @@ class QueryParser:
                 is_silent = True
                 tokens.get_now()
             if tokens.lookahead().term is QueryTerm.VARIABLE:
-                return ServiceGraphPattern(is_silent, tokens.get_now().content, self.group_graph_pattern(tokens))
+                return self.group_graph_pattern(
+                    tokens, ServiceGraphPattern(is_silent, tokens.get_now().content))
             else:
-                return ServiceGraphPattern(is_silent, self.iri(tokens), self.group_graph_pattern(tokens))
-        elif lookahead.term is QueryTerm.FILTER:
-            tokens.get_now()
-            return Filter(self.constraint())
-        elif lookahead.term is QueryTerm.BIND:
-            tokens.get_now()
-            var, expr = self.derived_var(tokens)
-            return Bind(expr, var)
+                return self.group_graph_pattern(
+                    tokens, ServiceGraphPattern(is_silent, self.iri(tokens)))
         elif lookahead.term is QueryTerm.LBRACKET:
-            ggp: GroupGraphPattern = self.group_graph_pattern(tokens)
-            if tokens.lookahead().term is QueryTerm.UNION:
+            unioned_ggp: List[GroupGraphPattern] = [self.group_graph_pattern(tokens, None)]
+            while tokens.lookahead().term is QueryTerm.UNION:
                 tokens.get_now()
-                return UnionGraphPattern(ggp, self.group_graph_pattern(tokens))
+                unioned_ggp.append(self.group_graph_pattern(tokens, None))
+            if len(unioned_ggp) > 1:
+                return UnionGraphPattern(patterns=unioned_ggp)
             else:
-                return ggp
+                return unioned_ggp[0]
+        self.throw_error([QueryTerm.LBRACKET, QueryTerm.SERVICE, QueryTerm.GRAPH, QueryTerm.MINUS,
+                          QueryTerm.OPTIONAL], lookahead.term)
             
     '''Constraint ::= '(' Expression ')' | BuiltInCall '''
     def constraint(self, tokens: LookaheadQueue) -> Expression:

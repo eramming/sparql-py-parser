@@ -1,7 +1,7 @@
-from .GroupGraphPattern import GroupGraphPattern
-from .ExprOp import ExprOp
+from ExprOp import ExprOp
 from typing import List
 from uuid import uuid4
+
 
 class Expression:
     def __init__(self) -> None:
@@ -14,15 +14,28 @@ class Expression:
         if isinstance(value, Expression):
             return value._id == self._id
         return False
+    
+class SelectExpr(Expression):
 
-class NegationExpr(Expression):
+    def __init__(self):
+        super().__init__()
+
+
+# Covers Booleans, Numbers, Strings, Irirefs, Variables
+class TerminalExpr(SelectExpr):
+
+    def __init__(self, stringified_val: str):
+        super().__init__()
+        self.stringified_val: str = stringified_val
+
+class NegationExpr(SelectExpr):
 
     def __init__(self, expr: Expression):
         super().__init__()
         self.expr: Expression = expr
 
 
-class MultiExprExpr(Expression):
+class MultiExprExpr(SelectExpr):
 
     def __init__(self, l_expr: Expression, r_expr: Expression, expr_op: ExprOp):
         super().__init__()
@@ -31,7 +44,7 @@ class MultiExprExpr(Expression):
         self.expr_op: ExprOp = expr_op
 
 
-class Function(Expression):
+class Function(SelectExpr):
 
     def __init__(self, func_name: str = None, args: List[Expression] = []):
         super().__init__()
@@ -79,21 +92,6 @@ class IdentityFunction(Function):
 
     def __init__(self, args: List[Expression] = []):
         super().__init__("", args)
-
-
-class ExistenceExpr(Expression):
-
-    def __init__(self, pattern: GroupGraphPattern, not_exists: bool = False):
-        super().__init__()
-        self.pattern: GroupGraphPattern = pattern
-        self.not_exists: bool = not_exists
-
-# Covers Booleans, Numbers, Strings, Irirefs, Variables
-class TerminalExpr(Expression):
-
-    def __init__(self, stringified_val: str):
-        super().__init__()
-        self.stringified_val: str = stringified_val
 
 
 # class NumberLiteralExpr(Expression):
