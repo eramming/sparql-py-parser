@@ -2,10 +2,9 @@ import os
 import sys
 from .BaseDecl import BaseDecl
 from .DatasetClause import DatasetClause
-from .GraphPatternNotTriples import GraphPatternNotTriples, OptionalGraphPattern, \
-    GraphGraphPattern, UnionGraphPattern, MinusGraphPattern, ServiceGraphPattern, \
-    Filter, Bind
-from .GroupGraphPattern import GroupGraphPattern
+from .PatternModifiers import PatternModifier, Bind, Filter
+from .GroupGraphPattern import GroupGraphPattern, GraphGraphPattern, OptionalGraphPattern, \
+    UnionGraphPattern, ServiceGraphPattern, MinusGraphPattern
 from .Prologue import Prologue
 from .Query import Query
 from .QueryParser import QueryParser
