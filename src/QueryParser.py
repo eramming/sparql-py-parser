@@ -248,19 +248,28 @@ class QueryParser:
         next_tok: Token = tokens.lookahead()
         if next_tok.term is QueryTerm.WHERE:
             tokens.get_now()
-        ggp: GroupGraphPatternSub = GroupGraphPatternSub()
-        return WhereClause(self.group_graph_pattern(tokens, ggp))
+        return WhereClause(self.group_graph_pattern(tokens, None))
     
     ''' GroupGraphPattern ::= '{' ( SubSelect | GroupGraphPatternSub ) '}' '''
-    def group_graph_pattern(self, tokens: LookaheadQueue, ggp: GroupGraphPatternSub) -> GroupGraphPatternSub:
+    def group_graph_pattern(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> GroupGraphPattern:
         assert tokens.get_now().term is QueryTerm.LBRACKET
+        root_ggp: GroupGraphPattern = None
 
         if tokens.lookahead().term is QueryTerm.SELECT:
-            ggp.add_pattern(self.sub_select(tokens))
+            if ggp_sub is None:
+                root_ggp = self.sub_select(tokens)
+            else:
+                ggp_sub.add_pattern(self.sub_select(tokens))
         else:
-            self.group_graph_pattern_sub(tokens, ggp)
+            if ggp_sub is None:
+                root_ggp = GroupGraphPatternSub()
+                self.group_graph_pattern_sub(tokens, root_ggp)
+            else:
+                self.group_graph_pattern_sub(tokens, ggp_sub)
         assert tokens.get_now().term is QueryTerm.RBRACKET
-        return ggp
+        if root_ggp:
+            return root_ggp
+        return ggp_sub
     
     '''GroupGraphPatternSub ::= TriplesBlock? (GraphPatternNotTriples '.'? TriplesBlock?)* '''
     def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp: GroupGraphPatternSub) -> None:
