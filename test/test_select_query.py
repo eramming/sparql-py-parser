@@ -1,8 +1,6 @@
 from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause, \
-    AggregateFunction, TerminalExpr
-from src.tokens import Tokenizer, Token
+    AggregateFunction, TerminalExpr, Tokenizer, Token, QueryTerm as qt
 from typing import List
-from src.tokens import QueryTerm as qt
 
 SIMPLE_SELECT: List[Token] = [Token(qt.SELECT), Token(qt.ASTERISK)]
 SIMPLE_WHERE: List[Token] = [Token(qt.WHERE), Token(qt.LBRACKET),

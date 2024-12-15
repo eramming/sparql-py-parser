@@ -1,4 +1,4 @@
-from Expressions import Expression
+from .Expressions import Expression
 from typing import Tuple, List
 
 class SolnModifier:

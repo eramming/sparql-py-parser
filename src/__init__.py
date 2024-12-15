@@ -1,6 +1,5 @@
 import os
 import sys
-from .BaseDecl import BaseDecl
 from .DatasetClause import DatasetClause
 from .PatternModifiers import PatternModifier, Bind, Filter
 from .GroupGraphPattern import GroupGraphPatternSub, GraphGraphPattern, OptionalGraphPattern, \
@@ -16,11 +15,12 @@ from .WhereClause import WhereClause
 from .LookaheadQueue import LookaheadQueue
 from .Expressions import Expression, Function, IdentityFunction, TerminalExpr, \
     AggregateFunction
-from ExistenceExpr import ExistenceExpr
+from .ExistenceExpr import ExistenceExpr
 from .ExprOp import ExprOp
 from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
 from .SubSelect import SubSelect
 from .Verbs import Verb, VerbPath, VarVerb
+from .tokens import QueryTerm, Token, Tokenizer
 
 
 # Add folder to path

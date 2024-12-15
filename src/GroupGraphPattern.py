@@ -1,7 +1,7 @@
 from uuid import uuid4
 from typing import List, Dict, Any
-from TriplesBlock import TriplesBlock
-from PatternModifiers import PatternModifier
+from .TriplesBlock import TriplesBlock
+from .PatternModifiers import PatternModifier
 
 
 class GroupGraphPattern:

@@ -1,30 +1,26 @@
-from tokens import QueryTerm, Token
-from Query import Query
-from SelectQuery import SelectQuery
-from SelectClause import SelectClause
-from Expressions import Expression, IdentityFunction, MultiExprExpr, \
+from .tokens import QueryTerm, Token
+from .Query import Query
+from .SelectQuery import SelectQuery
+from .SelectClause import SelectClause
+from .Expressions import Expression, IdentityFunction, MultiExprExpr, \
     Function, AggregateFunction, NegationExpr, TerminalExpr
-from ExistenceExpr import ExistenceExpr
-from ExprOp import ExprOp
-from GroupGraphPattern import GroupGraphPattern, GroupGraphPatternSub, GraphGraphPattern, \
+from .ExistenceExpr import ExistenceExpr
+from .ExprOp import ExprOp
+from .GroupGraphPattern import GroupGraphPattern, GroupGraphPatternSub, GraphGraphPattern, \
     OptionalGraphPattern, MinusGraphPattern, ServiceGraphPattern, UnionGraphPattern
-from PatternModifiers import PatternModifier, Filter, Bind
-from SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
-from SubSelect import SubSelect
-from TriplesBlock import TriplesBlock
-from TriplesSameSubj import TriplesSameSubj
-from Verbs import Verb, VerbPath, VarVerb
-from DatasetClause import DatasetClause
-from WhereClause import WhereClause
-from Prologue import Prologue
-from LookaheadQueue import LookaheadQueue
+from .PatternModifiers import PatternModifier, Filter, Bind
+from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
+from .SubSelect import SubSelect
+from .TriplesBlock import TriplesBlock
+from .TriplesSameSubj import TriplesSameSubj
+from .Verbs import Verb, VerbPath, VarVerb
+from .DatasetClause import DatasetClause
+from .WhereClause import WhereClause
+from .Prologue import Prologue
+from .LookaheadQueue import LookaheadQueue
 from typing import List, Tuple, Dict, Set
 
 class QueryParser:
-
-    PROLOGUE_STARTERS: List[QueryTerm] = [
-        QueryTerm.BASE, QueryTerm.PREFIX
-    ]
 
     def __init__(self) -> None:
         pass
@@ -34,17 +30,18 @@ class QueryParser:
 
     ''' Query ::= Prologue SelectQuery '''
     def query(self, tokens: LookaheadQueue) -> Query:
+        prologue_starters: List[QueryTerm] = [QueryTerm.BASE, QueryTerm.PREFIX]
         lookahead: Token = tokens.lookahead()
         prologue: Prologue = None
         select_query: SelectQuery = None
-        if lookahead.term in QueryParser.PROLOGUE_STARTERS:
+        if lookahead.term in prologue_starters:
             prologue = self.prologue(tokens, Prologue())
         if tokens.lookahead().term is QueryTerm.SELECT:
             select_query: SelectQuery = self.select_query(tokens)
         elif prologue:
-            self.throw_error([QueryTerm.SELECT.value], lookahead)
+            self.throw_error([QueryTerm.SELECT], lookahead)
         else:
-            self.throw_error(QueryParser.PROLOGUE_STARTERS + [QueryTerm.SELECT], lookahead)
+            self.throw_error(prologue_starters + [QueryTerm.SELECT], lookahead)
         
         next_tok: Token = tokens.get_now()
         if next_tok.term is QueryTerm.EOF:
@@ -98,11 +95,11 @@ class QueryParser:
     ''' SelectQuery ::= SelectClause DatasetClause* WhereClause SolutionModifier '''
     def select_query(self, tokens: LookaheadQueue) -> SelectQuery:
         select_query: SelectQuery = SelectQuery()
-        select_query.select_clause = self.select_clause(tokens)
+        select_query.set_select_clause(self.select_clause(tokens))
         if tokens.lookahead().term is QueryTerm.FROM:
-            select_query.dataset_clause = self.dataset_clause(tokens)
-        select_query.where_clause = self.where_clause(tokens)
-        select_query.soln_modifier = self.solution_modifier(tokens)
+            select_query.set_dataset_clause(self.dataset_clause(tokens))
+        select_query.set_where_clause(self.where_clause(tokens))
+        select_query.set_soln_modifier(self.solution_modifier(tokens))
         return select_query
     
     ''' SelectClause ::= 'SELECT' 'DISTINCT'?
@@ -245,10 +242,12 @@ class QueryParser:
     
     '''WhereClause ::= 'WHERE'? GroupGraphPattern '''
     def where_clause(self, tokens: LookaheadQueue) -> WhereClause:
+        uses_keyword: bool = False
         next_tok: Token = tokens.lookahead()
         if next_tok.term is QueryTerm.WHERE:
+            uses_keyword = True
             tokens.get_now()
-        return WhereClause(self.group_graph_pattern(tokens, None))
+        return WhereClause(self.group_graph_pattern(tokens, None), uses_keyword)
     
     ''' GroupGraphPattern ::= '{' ( SubSelect | GroupGraphPatternSub ) '}' '''
     def group_graph_pattern(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> GroupGraphPattern:

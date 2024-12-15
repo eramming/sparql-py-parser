@@ -99,7 +99,7 @@ class Tokenizer:
         return matched
         
     def tokenize_keyword(self, query_str: str, tokens: LookaheadQueue) -> None:
-        match: Match = re.search("(\\S+)\\s", query_str)
+        match: Match = re.search("(\\S+)(\\s|$)", query_str)
         if not match:
             return False
         word: str = match.groups()[0]
@@ -108,8 +108,10 @@ class Tokenizer:
             return self.tokenize_keyword_helper("^(\\S+)\\(", query_str, tokens)
         elif "{" in word:
             return self.tokenize_keyword_helper("^(\\S+){", query_str, tokens)
+        elif word.upper().startswith("SEPARATOR="):  # Only keyword followed by '='
+            return self.tokenize_keyword_helper("^(\\S+)=", query_str, tokens)
         else:
-            return self.tokenize_keyword_helper("^(\\S+)\\s", query_str, tokens)
+            return self.tokenize_keyword_helper("^(\\S+)(\\s|$)", query_str, tokens)
 
     def tokenize_keyword_helper(self, pattern: str, query_str: str, tokens: LookaheadQueue) -> str:
         match: Match = re.search(pattern, query_str)

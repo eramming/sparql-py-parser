@@ -1,4 +1,4 @@
-from GroupGraphPattern import GroupGraphPattern
+from .GroupGraphPattern import GroupGraphPattern
 
 class WhereClause:
 

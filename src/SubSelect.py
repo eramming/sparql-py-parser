@@ -1,7 +1,7 @@
-from SelectClause import SelectClause
-from WhereClause import WhereClause
-from SolnModifier import SolnModifier
-from GroupGraphPattern import GroupGraphPattern
+from .SelectClause import SelectClause
+from .WhereClause import WhereClause
+from .SolnModifier import SolnModifier
+from .GroupGraphPattern import GroupGraphPattern
 
 
 class SubSelect(GroupGraphPattern):

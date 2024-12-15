@@ -1,5 +1,5 @@
-from SelectQuery import SelectQuery
-from Prologue import Prologue
+from .SelectQuery import SelectQuery
+from .Prologue import Prologue
 
 class Query:
 

@@ -1,4 +1,4 @@
-from ExprOp import ExprOp
+from .ExprOp import ExprOp
 from typing import List
 from uuid import uuid4
 

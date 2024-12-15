@@ -286,7 +286,8 @@ def test_tokenizer_string_literal() -> None:
 
 def test_tokenizer_expected_failures() -> None:
     queries: List[str] = ["EOF", "PREFIXED_NAME_PREFIX", "PREFIXED_NAME_LOCAL",
-                          "IRIREF", "VARIABLE", "NUMBER_LITERAL", "STRING_LITERAL"]
+                          "IRIREF", "VARIABLE", "NUMBER_LITERAL", "STRING_LITERAL",
+                          "WHERE="]
     
     for query_str in queries:
         tokenizer: Tokenizer = Tokenizer()
@@ -318,27 +319,27 @@ def test_tokenizer_path_primaries() -> None:
     assert tokens.get_now().term is QueryTerm.EOF
 
 def test_tokenizer_extra_stuff() -> None:
-    COMMA = ","
-    EQUALS = "="
-    SEPARATOR = "SEPARATOR"
-    TRUE = "TRUE"
-    FALSE = "FALSE"
-    UNION = "UNION"
-    MINUS = "MINUS"
-    SERVICE = "SERVICE"
-    SILENT = "SILENT"
-    FILTER = "FILTER"
-    BIND = "BIND"
-    GROUP = "GROUP"
-    BY = "BY"
-    HAVING = "HAVING"
-    ORDER = "ORDER"
-    ASC = "ASC"
-    DESC = "DESC"
-    LIMIT = "LIMIT"
-    OFFSET = "OFFSET"
-    raise NotImplementedError()
+    query_str: str = '''SEPARATOR=","
+        TRUE FALSE UNION MINUS SERVICE SILENT FILTER BIND GROUP
+        BY HAVING ORDER ASC DESC LIMIT OFFSET'''
+    
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
 
+    assert tokens.get_now().term == QueryTerm.SEPARATOR
+    assert tokens.get_now().term == QueryTerm.EQUALS
+    str_lit: Token = tokens.get_now()
+    assert str_lit.term == QueryTerm.STRING_LITERAL
+    assert str_lit.content == ","
+    expected: List[QueryTerm] = [
+        QueryTerm.TRUE, QueryTerm.FALSE, QueryTerm.UNION,
+        QueryTerm.MINUS, QueryTerm.SERVICE, QueryTerm.SILENT,
+        QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.GROUP,
+        QueryTerm.BY, QueryTerm.HAVING, QueryTerm.ORDER,
+        QueryTerm.ASC, QueryTerm.DESC, QueryTerm.LIMIT,
+        QueryTerm.OFFSET, QueryTerm.EOF
+    ]
+    assert expected == [token.term for token in tokens.get_all()]
 
 def test_tokenizer_full_query() -> None:
     query_str: str = '''
@@ -347,7 +348,7 @@ def test_tokenizer_full_query() -> None:
         # An example query
         SELECT *
         WHERE {
-            ?person foaf:givenName "Eric" ;
+            ?person foaf:nick "Bobby", "Bob" ;
                     foaf:age 26 .
         }
         '''
@@ -376,10 +377,14 @@ def test_tokenizer_full_query() -> None:
     assert tokens.get_now().term is QueryTerm.COLON
     local_name: Token = tokens.get_now()
     assert local_name.term == QueryTerm.PREFIXED_NAME_LOCAL
-    assert local_name.content == "givenName"
-    string_literal: Token = tokens.get_now()
-    assert string_literal.term == QueryTerm.STRING_LITERAL
-    assert string_literal.content == "Eric"
+    assert local_name.content == "nick"
+    str_lit1: Token = tokens.get_now()
+    assert str_lit1.term == QueryTerm.STRING_LITERAL
+    assert str_lit1.content == "Bobby"
+    assert tokens.get_now().term is QueryTerm.COMMA
+    str_lit2: Token = tokens.get_now()
+    assert str_lit2.term == QueryTerm.STRING_LITERAL
+    assert str_lit2.content == "Bob"
 
     assert tokens.get_now().term is QueryTerm.SEMI_COLON
     prefix_name: Token = tokens.get_now()
@@ -389,9 +394,9 @@ def test_tokenizer_full_query() -> None:
     local_name: Token = tokens.get_now()
     assert local_name.term == QueryTerm.PREFIXED_NAME_LOCAL
     assert local_name.content == "age"
-    string_literal: Token = tokens.get_now()
-    assert string_literal.term == QueryTerm.NUMBER_LITERAL
-    assert string_literal.content == "26"
+    num_lit: Token = tokens.get_now()
+    assert num_lit.term == QueryTerm.NUMBER_LITERAL
+    assert num_lit.content == "26"
 
     assert tokens.get_now().term is QueryTerm.PERIOD
     assert tokens.get_now().term is QueryTerm.RBRACKET

@@ -1,5 +1,5 @@
-from GroupGraphPattern import GroupGraphPattern
-from Expressions import Expression
+from .GroupGraphPattern import GroupGraphPattern
+from .Expressions import Expression
 
 class ExistenceExpr(Expression):
 

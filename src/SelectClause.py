@@ -1,5 +1,5 @@
 from typing import Dict, Set
-from Expressions import Expression
+from .Expressions import Expression
 
 class SelectClause:
 
