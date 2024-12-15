@@ -3,12 +3,23 @@ from typing import Tuple, List
 
 class SolnModifier:
 
-    def __init__(self, group_clause: 'GroupClause', having_clause: 'HavingClause',
-                 order_clause: 'OrderClause', limit_offset_clause: 'LimitOffsetClause'):
-        self.group_clause: GroupClause = group_clause
-        self.having_clause: HavingClause = having_clause
-        self.order_clause: OrderClause = order_clause
-        self.limit_offset_clause: LimitOffsetClause = limit_offset_clause
+    def __init__(self):
+        self.group_clause: GroupClause = None
+        self.having_clause: HavingClause = None
+        self.order_clause: OrderClause = None
+        self.limit_offset_clause: LimitOffsetClause = None
+
+    def set_group_clause(self, group_clause: 'GroupClause') -> None:
+        self.group_clause = group_clause
+    
+    def set_having_clause(self, having_clause: 'HavingClause') -> None:
+        self.having_clause = having_clause
+    
+    def set_order_clause(self, order_clause: 'OrderClause') -> None:
+        self.order_clause = order_clause
+    
+    def set_limit_offset_clause(self, limit_offset_clause: 'LimitOffsetClause') -> None:
+        self.limit_offset_clause = limit_offset_clause
 
     def __str__(self):
         return f"{self.group_clause} {self.having_clause} {self.order_clause} {self.limit_offset_clause}"

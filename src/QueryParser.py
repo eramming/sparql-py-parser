@@ -3,7 +3,7 @@ from .Query import Query
 from .SelectQuery import SelectQuery
 from .SelectClause import SelectClause
 from .Expressions import Expression, IdentityFunction, MultiExprExpr, \
-    Function, AggregateFunction, NegationExpr, TerminalExpr
+    Function, AggregateFunction, NegationExpr, TerminalExpr, GroupConcatFunction
 from .ExistenceExpr import ExistenceExpr
 from .ExprOp import ExprOp
 from .GroupGraphPattern import GroupGraphPattern, GroupGraphPatternSub, GraphGraphPattern, \
@@ -176,6 +176,7 @@ class QueryParser:
                        | 'REGEX' '(' Expression ',' Expression (',' Expression)? ')'
                        | 'SUBSTR' '(' Expression ',' Expression (',' Expression)? ')'
                        | 'REPLACE' '(' Expression ',' Expression ',' Expression (',' Expression)? ')'
+                       | Aggregate
                        | any_other_built_in '(' Expression ')' '''
     def built_in_call(self, built_in_term: QueryTerm, tokens: LookaheadQueue) -> Expression:
         if built_in_term is QueryTerm.NOT:
@@ -183,6 +184,12 @@ class QueryParser:
             return ExistenceExpr(self.group_graph_pattern(), True)
         elif built_in_term is QueryTerm.EXISTS:
             return ExistenceExpr(self.group_graph_pattern(), False)
+        
+        aggregates: List[QueryTerm] = [
+            QueryTerm.COUNT, QueryTerm.SUM, QueryTerm.MIN, QueryTerm.MAX, QueryTerm.AVG,
+            QueryTerm.SAMPLE, QueryTerm.GROUP_CONCAT]
+        if built_in_term in aggregates:
+            return self.aggregate(built_in_term, tokens)
         
         args: List[Expression] = None
         assert tokens.get_now().term is QueryTerm.LPAREN
@@ -193,9 +200,41 @@ class QueryParser:
         elif built_in_term is QueryTerm.CONCAT:
             args = self.expression_list(tokens, min=1, max=None)
         else:
-            args = self.expression(tokens)
+            args = [self.expression(tokens)]
         assert tokens.get_now().term is QueryTerm.RPAREN
         return Function(built_in_term.value, args)
+    
+    def aggregate(self, agg_term: QueryTerm, tokens: LookaheadQueue) -> Expression:
+        assert tokens.get_now().term is QueryTerm.LPAREN
+        is_distinct: bool = False
+        if tokens.lookahead().term is QueryTerm.DISTINCT:
+            is_distinct = True
+            tokens.get_now()
+        
+        arg: Expression = None
+        if tokens.lookahead().term is QueryTerm.ASTERISK:
+            if agg_term is QueryTerm.COUNT:
+                tokens.get_now()
+                arg = TerminalExpr("*")
+            else:
+                raise ValueError(f"Asterick followed {agg_term.value}. "
+                                 f"Its only allowed for aggregate function 'count()'")
+        if arg is None:
+            arg = self.expression(tokens)
+
+        if agg_term is QueryTerm.GROUP_CONCAT:
+            separator: str = None
+            if tokens.lookahead().term is QueryTerm.SEMI_COLON:
+                tokens.get_now()
+                assert tokens.get_now().term is QueryTerm.SEPARATOR
+                assert tokens.get_now().term is QueryTerm.EQUALS
+                str_lit: Token = tokens.get_now()
+                assert str_lit.term is QueryTerm.STRING_LITERAL
+                separator = str_lit.content
+            assert tokens.get_now().term is QueryTerm.RPAREN
+            return GroupConcatFunction(arg, is_distinct, separator)
+        assert tokens.get_now().term is QueryTerm.RPAREN
+        return AggregateFunction(agg_term.value, arg, is_distinct)
 
     '''ExpressionList ::= Expression (',' Expression)* '''
     def expression_list(self, tokens: LookaheadQueue, min: int, max: int) -> List[Expression]:
@@ -464,16 +503,16 @@ class QueryParser:
         if lookahead.term is QueryTerm.GROUP:
             tokens.get_now()
             assert tokens.get_now().term is QueryTerm.BY
-            modifier.group_clause = self.group_condition(tokens, GroupClause())
+            modifier.set_group_clause(self.group_condition(tokens, GroupClause()))
         if lookahead.term is QueryTerm.HAVING:
             tokens.get_now()
-            modifier.having_clause = self.having_condition(tokens, HavingClause())
+            modifier.set_having_clause(self.having_condition(tokens, HavingClause()))
         if lookahead.term is QueryTerm.ORDER:
             tokens.get_now()
             assert tokens.get_now().term is QueryTerm.BY
-            modifier.order_clause = self.order_condition(tokens, OrderClause())
+            modifier.set_order_clause(self.order_condition(tokens, OrderClause()))
         if lookahead.term in [QueryTerm.LIMIT, QueryTerm.OFFSET]:
-            modifier.limit_offset_clause = self.limit_offset_condition(tokens)
+            modifier.set_limit_offset_clause(self.limit_offset_condition(tokens))
         return modifier
 
     def group_condition(self, tokens: LookaheadQueue, group_clause: GroupClause) -> GroupClause:

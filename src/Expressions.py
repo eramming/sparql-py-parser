@@ -1,4 +1,5 @@
 from .ExprOp import ExprOp
+from .tokens import QueryTerm
 from typing import List
 from uuid import uuid4
 
@@ -62,25 +63,36 @@ class Function(Expression):
 
 class AggregateFunction(Function):
 
-    def __init__(self, func_name: str = None, args: List[Expression] = [],
-                 has_distinct_flag: bool = False, extras: str = ""):
-        super().__init__(func_name, args)
+    def __init__(self, func_name: str, arg: Expression,
+                 has_distinct_flag: bool = False):
+        super().__init__(func_name, [arg])
         self.has_distinct_flag: bool = has_distinct_flag
-        self.extras: str = ""  # For certain funcs that can have optional weird tokens/params
 
     def set_distinct_flag(self) -> None:
         self.has_distinct_flag = True
-
-    def set_extras(self, extras: str) -> None:
-        self.extras = extras
 
     def __format__(self, format_spec):
         self.__str__()
     
     def __str__(self):
         distinct: str = "DISTINCT " if self.has_distinct_flag else ""
-        arg_str: str = ", ".join(self.args)
-        return f"{self.func_name.upper()}({distinct}{arg_str}{self.extras})"
+        return f"{self.func_name.upper()}({distinct}{self.args[0]})"
+    
+
+class GroupConcatFunction(AggregateFunction):
+
+    def __init__(self, arg: Expression, has_distinct_flag: bool = False,
+                 separator: str = None):
+        super().__init__(QueryTerm.GROUP_CONCAT.value, arg, has_distinct_flag)
+        self.separator = separator
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        distinct: str = "DISTINCT " if self.has_distinct_flag else ""
+        separator_str: str = f"; SEPARATOR='{self.separator}'" if self.separator else ""
+        return f"{self.func_name.upper()}({distinct}{self.args[0]}{separator_str})"
 
 
 class IdentityFunction(Function):

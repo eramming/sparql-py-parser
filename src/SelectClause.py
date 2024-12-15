@@ -5,7 +5,7 @@ class SelectClause:
 
     def __init__(self) -> None:
         self.explicit_vars: Set[str] = set()
-        self.derived_vars: Dict[str, Expression] = []
+        self.derived_vars: Dict[str, Expression] = {}
         self.is_distinct = False
         self.is_select_all = False
 

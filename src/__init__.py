@@ -14,7 +14,7 @@ from .TriplesSameSubj import TriplesSameSubj
 from .WhereClause import WhereClause
 from .LookaheadQueue import LookaheadQueue
 from .Expressions import Expression, Function, IdentityFunction, TerminalExpr, \
-    AggregateFunction
+    AggregateFunction, GroupConcatFunction
 from .ExistenceExpr import ExistenceExpr
 from .ExprOp import ExprOp
 from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause

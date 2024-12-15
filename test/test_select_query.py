@@ -1,5 +1,5 @@
 from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause, \
-    AggregateFunction, TerminalExpr, Tokenizer, Token, QueryTerm as qt
+    GroupConcatFunction, TerminalExpr, Tokenizer, Token, QueryTerm as qt
 from typing import List
 
 SIMPLE_SELECT: List[Token] = [Token(qt.SELECT), Token(qt.ASTERISK)]
@@ -36,11 +36,11 @@ def test_parser_prologue() -> None:
     assert prologue.prefixes["rdf"] == rdf
 
 def test_parser_select_clause() -> None:
-    # SELECT DISTINCT ?givenName ?age
+    # SELECT DISTINCT ?fName ?age
     # (GROUP_CONCAT(DISTINCT ?concat_subject_attribute; SEPARATOR=" ~~~~ ") AS ?subject_attributes)
-    # ?familyName
-    fname, age, concat_subj_attr, sep = "givenName", "age", "concat_subject_attribute", "~~~~"
-    sub_attr, lname = "subject_attributes", "familyName"
+    # ?lName
+    fname, age, concat_subj_attr, sep = "fName", "age", "concat_subject_attribute", " ~~~~ "
+    sub_attr, lname = "subject_attributes", "lName"
     tokens: List[Token] = [
         Token(qt.SELECT), Token(qt.DISTINCT), Token(qt.VARIABLE, fname),
         Token(qt.VARIABLE, age), Token(qt.LPAREN), Token(qt.GROUP_CONCAT),
@@ -55,19 +55,17 @@ def test_parser_select_clause() -> None:
     select_clause: SelectClause = query.select_query.select_clause
     assert query.prologue.base_iri is None
     assert len(query.prologue.prefixes) == 0
-    assert select_clause.explicit_vars == set(fname, age, lname)
+    assert select_clause.explicit_vars == set([fname, age, lname])
     assert select_clause.is_distinct
     assert not select_clause.is_select_all
     assert len(select_clause.derived_vars) == 1
     assert sub_attr in select_clause.derived_vars
-    func: AggregateFunction = select_clause.derived_vars[sub_attr]
-    assert isinstance(func, AggregateFunction)
-    assert func.func_name == "GROUP_CONCAT"
-    assert func.has_distinct_flag
-    assert len(func.args) == 1
-    assert isinstance(func.args[0], TerminalExpr)
-    assert func.args[0].stringified_val == concat_subj_attr
-    assert func.extras == '; SEPARATOR=" ~~~~ "'
+    gc_func: GroupConcatFunction = select_clause.derived_vars[sub_attr]
+    assert isinstance(gc_func, GroupConcatFunction)
+    assert gc_func.has_distinct_flag
+    assert isinstance(gc_func.args[0], TerminalExpr)
+    assert gc_func.args[0].stringified_val == concat_subj_attr
+    assert gc_func.separator == sep
 
 
 def test_parser_dataset_clause() -> None:
