@@ -78,6 +78,15 @@ class QueryTerm(Enum):
     STRLEN = "STRLEN"
     UCASE = "UCASE"
     LCASE = "LCASE"
+    DIV = "/"
+    ADD = "+"
+    SUB = "-"
+    AND = "&&"
+    LT = "<"
+    GT = ">"
+    G_OR_EQ = ">="
+    L_OR_EQ = "<="
+    NOT_EQ = "!="
 
     def from_keyword(term: str) -> 'QueryTerm':
         if term is None:

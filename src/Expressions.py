@@ -44,8 +44,8 @@ class Function(Expression):
 
     def __init__(self, func_name: str = None, args: List[Expression] = []):
         super().__init__()
-        self.func_name = func_name
-        self.args = args
+        self.func_name: str = func_name
+        self.args: List[Expression] = args
 
     def add_arg(self, exp: Expression) -> None:
         self.args.append(exp)
@@ -97,8 +97,8 @@ class GroupConcatFunction(AggregateFunction):
 
 class IdentityFunction(Function):
 
-    def __init__(self, args: List[Expression] = []):
-        super().__init__("", args)
+    def __init__(self, arg: Expression):
+        super().__init__("", [arg])
 
 
 # class NumberLiteralExpr(Expression):

@@ -1,5 +1,5 @@
 from .Expressions import Expression
-from typing import Tuple, List
+from typing import Dict, List
 
 class SolnModifier:
 
@@ -32,14 +32,14 @@ class GroupClause:
 
     def __init__(self):
         self.built_in_calls: List[Expression] = []
-        self.derived_vars: List[Tuple[str, Expression]] = []
+        self.derived_vars: Dict[str, Expression] = {}
         self.vars: List[str] = []
 
     def add_built_in_call(self, built_in_call: Expression) -> None:
         self.built_in_calls.append(built_in_call)
 
     def add_derived_var(self, var: str, expr: Expression) -> None:
-        self.derived_vars.append((var, expr))
+        self.derived_vars[var] = expr
 
     def add_var(self, var: str) -> None:
         self.vars.append(var)
@@ -59,14 +59,14 @@ class GroupClause:
 
 class HavingClause:
 
-    def __init__(self, expr: List[Expression] = []):
-        self.expr: List[Expression] = expr
+    def __init__(self, expressions: List[Expression] = []):
+        self.expressions: List[Expression] = expressions
 
     def add_expr(self, expr: Expression) -> None:
-        self.expr.append(expr)
+        self.expressions.append(expr)
 
     def __str__(self):
-        return f"HAVING {' '.join(self.expr)}"
+        return f"HAVING {' '.join(self.expressions)}"
     
     def __format__(self, format_spec):
         return self.__str__()
@@ -74,17 +74,17 @@ class HavingClause:
 
 class OrderClause:
 
-    def __init__(self, expr: List[Expression] = []):
-        self.expr: List[Expression] = expr
+    def __init__(self, expressions: List[Expression] = []):
+        self.expressions: List[Expression] = expressions
 
     def add_expr(self, expr: Expression) -> None:
-        self.expr.append(expr)
+        self.expressions.append(expr)
 
     def is_empty(self) -> bool:
-        return len(self.expr) == 0
+        return len(self.expressions) == 0
 
     def __str__(self):
-        return f"ORDER BY {' '.join(self.expr)}"
+        return f"ORDER BY {' '.join(self.expressions)}"
     
     def __format__(self, format_spec):
         return self.__str__()

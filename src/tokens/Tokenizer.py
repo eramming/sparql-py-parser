@@ -139,7 +139,7 @@ class Tokenizer:
         if not match:
             raise ValueError("Invalid variable")
         variable: str = match.groups()[0]
-        tokens.put(Token(QueryTerm.VARIABLE, variable))
+        tokens.put(Token(QueryTerm.VARIABLE, f"?{variable}"))
         return query_str[len(variable):].lstrip()
     
     # Always before a colon

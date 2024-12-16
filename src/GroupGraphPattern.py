@@ -37,10 +37,12 @@ class GroupGraphPatternSub:
         self.order_of_elements.append(uuid)
         self.patterns[uuid] = pattern
 
+    def elements_in_order(self) -> List[Any]:
+        all_elements: Dict[str, Any] = self.triples_blocks | self.modifiers | self.patterns
+        return [all_elements[uuid] for uuid in self.order_of_elements]
+
     def __str__(self):
-        all_elements: Dict[str, Any] = self.triple_blocks | self.modifiers | self.patterns
-        elements_in_order = [all_elements[uuid] for uuid in self.order_of_elements]
-        ggp_interior: str = "\n".join(elements_in_order)
+        ggp_interior: str = "\n".join(self.elements_in_order())
         return f"{{ {ggp_interior} }}"
     
     def __format__(self, format_spec):

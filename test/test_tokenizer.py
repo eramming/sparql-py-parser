@@ -54,13 +54,13 @@ def test_tokenizer_select_variables() -> None:
     assert tokens.get_now().term is QueryTerm.SELECT
     var1: Token = tokens.get_now()
     assert var1.term == QueryTerm.VARIABLE
-    assert var1.content == "first_name"
+    assert var1.content == "?first_name"
     var2: Token = tokens.get_now()
     assert var2.term == QueryTerm.VARIABLE
-    assert var2.content == "_AGE"
+    assert var2.content == "?_AGE"
     var3: Token = tokens.get_now()
     assert var3.term == QueryTerm.VARIABLE
-    assert var3.content == "4th_grade_teacher"
+    assert var3.content == "?4th_grade_teacher"
     assert tokens.get_now().term is QueryTerm.EOF
 
 def test_tokenizer_select_distinct() -> None:
@@ -72,7 +72,7 @@ def test_tokenizer_select_distinct() -> None:
     assert tokens.get_now().term is QueryTerm.DISTINCT
     var1: Token = tokens.get_now()
     assert var1.term == QueryTerm.VARIABLE
-    assert var1.content == "first_name"
+    assert var1.content == "?first_name"
     assert tokens.get_now().term is QueryTerm.EOF
 
 def test_tokenizer_select_all() -> None:
@@ -95,12 +95,12 @@ def test_tokenizer_derived_var() -> None:
     assert tokens.get_now().term is QueryTerm.LPAREN
     var1: Token = tokens.get_now()
     assert var1.term == QueryTerm.VARIABLE
-    assert var1.content == "first_name"
+    assert var1.content == "?first_name"
     assert tokens.get_now().term is QueryTerm.RPAREN
     assert tokens.get_now().term is QueryTerm.AS
     var2: Token = tokens.get_now()
     assert var2.term == QueryTerm.VARIABLE
-    assert var2.content == "uppercase_fname"
+    assert var2.content == "?uppercase_fname"
     assert tokens.get_now().term is QueryTerm.RPAREN
     assert tokens.get_now().term is QueryTerm.EOF
 
@@ -220,10 +220,10 @@ def test_tokenizer_comments() -> None:
 
     var1: Token = tokens.get_now()
     assert var1.term == QueryTerm.VARIABLE
-    assert var1.content == "var1"
+    assert var1.content == "?var1"
     var2: Token = tokens.get_now()
     assert var2.term == QueryTerm.VARIABLE
-    assert var2.content == "var2"
+    assert var2.content == "?var2"
     assert tokens.get_now().term is QueryTerm.EOF
 
 def test_tokenizer_number_literal() -> None:
@@ -306,7 +306,7 @@ def test_tokenizer_path_primaries() -> None:
 
     var: Token = tokens.get_now()
     assert var.term == QueryTerm.VARIABLE
-    assert var.content == "entity"
+    assert var.content == "?entity"
     assert tokens.get_now().term == QueryTerm.EXCLAMATION
     assert tokens.get_now().term == QueryTerm.A
     prefix: Token = tokens.get_now()
@@ -370,7 +370,7 @@ def test_tokenizer_full_query() -> None:
     assert tokens.get_now().term is QueryTerm.LBRACKET
     var1: Token = tokens.get_now()
     assert var1.term == QueryTerm.VARIABLE
-    assert var1.content == "person"
+    assert var1.content == "?person"
     prefix_name: Token = tokens.get_now()
     assert prefix_name.term == QueryTerm.PREFIXED_NAME_PREFIX
     assert prefix_name.content == "foaf"
