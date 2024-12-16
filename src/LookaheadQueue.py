@@ -20,3 +20,7 @@ class LookaheadQueue(Queue):
             q_as_list: List = list(self.queue)
             self.queue = deque()
             return q_as_list
+        
+    def put_all(self, elements: List) -> None:
+        with self.mutex:
+            self.queue.extend(elements)
