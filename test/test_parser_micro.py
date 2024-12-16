@@ -54,7 +54,7 @@ def test_parser_built_in_call_existence() -> None:
         Token(qt.STRING_LITERAL, sqeej), Token(qt.RBRACKET)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
-    built_in_term: Token = tok_queue.get_now()
+    built_in_term: qt = tok_queue.get_now().term
     ex_expr = QueryParser().built_in_call(built_in_term, tok_queue)
     assert isinstance(ex_expr, ExistenceExpr)
     assert ex_expr.not_exists
@@ -63,7 +63,7 @@ def test_parser_built_in_call_existence() -> None:
 
     tokens, tok_queue = tokens[1:], LookaheadQueue()
     tok_queue.put_all(tokens)
-    built_in_term: Token = tok_queue.get_now()
+    built_in_term: qt = tok_queue.get_now().term
     ex_expr = QueryParser().built_in_call(built_in_term, tok_queue)
     assert isinstance(ex_expr, ExistenceExpr)
     assert not ex_expr.not_exists
@@ -80,7 +80,8 @@ def test_parser_built_in_call_concat() -> None:
         Token(qt.VARIABLE, ele5), Token(qt.RPAREN)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
-    func = QueryParser().built_in_call(tok_queue)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
     assert isinstance(func, Function)
     assert func.func_name == "CONCAT"
     assert [v.stringified_val for v in func.args] == [ele1, ele2, ele3, ele4, ele5]
@@ -91,19 +92,21 @@ def test_parser_built_in_call_regex() -> None:
     name, pat1, pat2, flag = "?name", "^Ali", "^ali", "-i"
     tokens: List[Token] = [
         Token(qt.REGEX), Token(qt.LPAREN), Token(qt.VARIABLE, name), Token(qt.COMMA),
-        Token(qt.STRING_LITERAL, pat1), Token(qt.LPAREN)]
+        Token(qt.STRING_LITERAL, pat1), Token(qt.RPAREN)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
-    func = QueryParser().built_in_call(tok_queue)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
     assert isinstance(func, Function)
     assert func.func_name == "REGEX"
     assert [v.stringified_val for v in func.args] == [name, pat1]
 
     tokens = tokens[:len(tokens) - 2] + [Token(qt.STRING_LITERAL, pat2), Token(qt.COMMA),
-                                         Token(qt.STRING_LITERAL, flag), Token(qt.LPAREN)]
+                                         Token(qt.STRING_LITERAL, flag), Token(qt.RPAREN)]
     tok_queue = LookaheadQueue()
     tok_queue.put_all(tokens)
-    func = QueryParser().built_in_call(tok_queue)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
     assert isinstance(func, Function)
     assert func.func_name == "REGEX"
     assert [v.stringified_val for v in func.args] == [name, pat2, flag]

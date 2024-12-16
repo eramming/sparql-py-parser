@@ -175,7 +175,7 @@ class QueryParser:
         elif next_tok.term is QueryTerm.EXCLAMATION:
             return NegationExpr(self.expression())
         elif next_tok.term is QueryTerm.STRING_LITERAL:
-            return TerminalExpr(f"'{next_tok.content}'")
+            return TerminalExpr(next_tok.content)
         elif next_tok.term is QueryTerm.NUMBER_LITERAL:
             return TerminalExpr(next_tok.content)
         elif next_tok.term in [QueryTerm.TRUE, QueryTerm.FALSE]:
@@ -195,9 +195,9 @@ class QueryParser:
     def built_in_call(self, built_in_term: QueryTerm, tokens: LookaheadQueue) -> Expression:
         if built_in_term is QueryTerm.NOT:
             assert tokens.get_now().term is QueryTerm.EXISTS
-            return ExistenceExpr(self.group_graph_pattern(), True)
+            return ExistenceExpr(self.group_graph_pattern(tokens, None), True)
         elif built_in_term is QueryTerm.EXISTS:
-            return ExistenceExpr(self.group_graph_pattern(), False)
+            return ExistenceExpr(self.group_graph_pattern(tokens, None), False)
         
         aggregates: List[QueryTerm] = [
             QueryTerm.COUNT, QueryTerm.SUM, QueryTerm.MIN, QueryTerm.MAX, QueryTerm.AVG,
@@ -254,7 +254,7 @@ class QueryParser:
     def expression_list(self, tokens: LookaheadQueue, min: int, max: int) -> List[Expression]:
         if max is not None and min > max:
             raise ValueError("Min must be <= max")
-        args: List[Expression] = []
+        args: List[Expression] = [self.expression(tokens)]
         while tokens.lookahead().term is QueryTerm.COMMA:
             tokens.get_now()
             args.append(self.expression(tokens))
