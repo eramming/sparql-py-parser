@@ -407,7 +407,7 @@ class QueryParser:
             assert tokens.get_now().term is QueryTerm.RPAREN
             return ex
         elif tokens.lookahead().term.value in QueryTerm.built_in_calls():
-            return self.built_in_call(tokens.get_now(), tokens)
+            return self.built_in_call(tokens.get_now().term, tokens)
         else:
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
             self.throw_error([QueryTerm.LPAREN] + built_in_qts, tokens.lookahead())
@@ -536,11 +536,20 @@ class QueryParser:
             group_clause.add_var(tokens.get_now().content)
             self.group_condition(tokens, group_clause)
         elif lookahead.term is QueryTerm.LPAREN:
-            var, expr = self.derived_var(tokens)
-            group_clause.add_derived_var(var, expr)
+            tokens.get_now()
+            expr = self.expression(tokens)
+            if tokens.lookahead().term is QueryTerm.AS:
+                tokens.get_now()
+                var: Token = tokens.get_now()
+                assert var.term is QueryTerm.VARIABLE
+                group_clause.add_derived_var(var.content, expr)
+            else:
+                group_clause.add_expr(IdentityFunction(expr))
+            assert tokens.get_now().term is QueryTerm.RPAREN
             self.group_condition(tokens, group_clause)
         elif lookahead.term.value in QueryTerm.built_in_calls():
-            group_clause.add_built_in_call(self.built_in_call(tokens.get_now().term, tokens))
+            built_in_term: QueryTerm = tokens.get_now().term
+            group_clause.add_expr(self.built_in_call(built_in_term, tokens))
             self.group_condition(tokens, group_clause)
         elif group_clause.is_empty():
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
@@ -571,8 +580,8 @@ class QueryParser:
             order_clause.add_expr(Function("DESC", [self.expression(tokens)]))
             assert tokens.get_now().term is QueryTerm.RPAREN
             self.order_condition(tokens, order_clause)
-        elif lookahead.term.value in QueryTerm.built_in_calls():
-            order_clause.add_expr(self.built_in_call(tokens.get_now().term, tokens))
+        elif lookahead.term.value in [QueryTerm.LPAREN.value] + QueryTerm.built_in_calls():
+            order_clause.add_expr(self.constraint(tokens))
             self.order_condition(tokens, order_clause)
         elif order_clause.is_empty():
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]

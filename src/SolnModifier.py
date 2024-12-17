@@ -31,12 +31,12 @@ class SolnModifier:
 class GroupClause:
 
     def __init__(self):
-        self.built_in_calls: List[Expression] = []
+        self.expressions: List[Expression] = []
         self.derived_vars: Dict[str, Expression] = {}
         self.vars: List[str] = []
 
-    def add_built_in_call(self, built_in_call: Expression) -> None:
-        self.built_in_calls.append(built_in_call)
+    def add_expr(self, expr: Expression) -> None:
+        self.expressions.append(expr)
 
     def add_derived_var(self, var: str, expr: Expression) -> None:
         self.derived_vars[var] = expr
@@ -45,10 +45,10 @@ class GroupClause:
         self.vars.append(var)
 
     def is_empty(self) -> bool:
-        return len(self.built_in_calls) + len(self.derived_vars) + len(self.vars) == 0
+        return len(self.expressions) + len(self.derived_vars) + len(self.vars) == 0
 
     def __str__(self):
-        output: str = (f"GROUP BY {' '.join(self.built_in_calls)} "
+        output: str = (f"GROUP BY {' '.join(self.expressions)} "
                        f"{' '.join(self.derived_vars)} "
                        f"{' '.join(self.vars)}")
         return output

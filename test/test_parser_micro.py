@@ -322,13 +322,110 @@ def test_parser_property_list_path_not_empty() -> None:
     raise NotImplementedError()
 
 def test_parser_group_condition() -> None:
-    raise NotImplementedError()
+    ''' GROUP BY (UCASE(?lName)) FLOOR(?age)  ?country (?x + ?y AS ?z)'''
+    l_name, age, country, x, y, z = "?lName", "?age", "?country", "?x", "?y", "?z"
+    tokens: List[Token] = [
+        Token(qt.GROUP), Token(qt.BY), Token(qt.LPAREN), Token(qt.UCASE), Token(qt.LPAREN),
+        Token(qt.VARIABLE, l_name), Token(qt.RPAREN), Token(qt.RPAREN),
+        Token(qt.FLOOR), Token(qt.LPAREN), Token(qt.VARIABLE, age), Token(qt.RPAREN),
+        Token(qt.VARIABLE, country), Token(qt.LPAREN), Token(qt.VARIABLE, x),
+        Token(qt.ADD), Token(qt.VARIABLE, y), Token(qt.AS), Token(qt.VARIABLE, z),
+        Token(qt.RPAREN), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.having_clause, s_mod.order_clause, s_mod.limit_offset_clause]
+    gc: GroupClause = s_mod.group_clause
+    assert gc.vars == [country]
+    assert len(gc.derived_vars) == 1 and len(gc.expressions) == 2
+    assert isinstance(gc.derived_vars[z], MultiExprExpr) and gc.derived_vars[z].expr_op is ExprOp.ADD
+    assert isinstance(gc.expressions[0], IdentityFunction) and isinstance(gc.expressions[1], Function)
+    assert gc.expressions[0].args[0].func_name == "UCASE" and gc.expressions[1].func_name == "FLOOR"
 
 def test_parser_having_condition() -> None:
-    raise NotImplementedError()
+    ''' HAVING (UCASE(?lName)) FLOOR(?age)  (?country)'''
+    l_name, age, country = "?lName", "?age", "?country"
+    tokens: List[Token] = [
+        Token(qt.HAVING), Token(qt.LPAREN), Token(qt.UCASE), Token(qt.LPAREN),
+        Token(qt.VARIABLE, l_name), Token(qt.RPAREN), Token(qt.RPAREN),
+        Token(qt.FLOOR), Token(qt.LPAREN), Token(qt.VARIABLE, age), Token(qt.RPAREN),
+        Token(qt.LPAREN), Token(qt.VARIABLE, country), Token(qt.RPAREN), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.group_clause, s_mod.order_clause, s_mod.limit_offset_clause]
+    hc: HavingClause = s_mod.having_clause
+    assert len(hc.expressions) == 3 and isinstance(hc.expressions[0], IdentityFunction)
+    assert isinstance(hc.expressions[1], Function) and isinstance(hc.expressions[2], IdentityFunction)
+    assert hc.expressions[0].args[0].func_name == "UCASE" and hc.expressions[1].func_name == "FLOOR"
+    assert hc.expressions[2].args[0].stringified_val == country
 
 def test_parser_order_condition() -> None:
-    raise NotImplementedError()
+    ''' ORDER BY (UCASE(?lName)) FLOOR(?age)  ?country ASC(?dob)'''
+    l_name, age, country, dob = "?lName", "?age", "?country", "?dob"
+    tokens: List[Token] = [
+        Token(qt.ORDER), Token(qt.BY), Token(qt.LPAREN), Token(qt.UCASE), Token(qt.LPAREN),
+        Token(qt.VARIABLE, l_name), Token(qt.RPAREN), Token(qt.RPAREN),
+        Token(qt.FLOOR), Token(qt.LPAREN), Token(qt.VARIABLE, age), Token(qt.RPAREN),
+        Token(qt.VARIABLE, country), Token(qt.ASC), Token(qt.LPAREN), Token(qt.VARIABLE, dob),
+        Token(qt.RPAREN), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.group_clause, s_mod.having_clause, s_mod.limit_offset_clause]
+    oc: OrderClause = s_mod.order_clause
+    assert len(oc.expressions) == 4 and isinstance(oc.expressions[0], IdentityFunction)
+    assert isinstance(oc.expressions[1], Function) and isinstance(oc.expressions[3], Function)
+    assert oc.expressions[0].args[0].func_name == "UCASE" and oc.expressions[1].func_name == "FLOOR"
+    assert oc.expressions[2].stringified_val == country and oc.expressions[3].func_name == "ASC"
 
 def test_parser_limit_offset_condition() -> None:
-    raise NotImplementedError()
+    ''' LIMIT 100 OFFSET 10'''
+    limit_val, offset_val = "100", "10"
+    tokens: List[Token] = [
+        Token(qt.LIMIT), Token(qt.NUMBER_LITERAL, limit_val), Token(qt.OFFSET),
+        Token(qt.NUMBER_LITERAL, offset_val), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.group_clause, s_mod.having_clause, s_mod.order_clause]
+    loc: LimitOffsetClause = s_mod.limit_offset_clause
+    assert loc.limit_first
+    assert loc.limit == int(limit_val) and loc.offset == int(offset_val)
+
+    ''' OFFSET 10 LIMIT 100'''
+    limit_val, offset_val = "100", "10"
+    tokens: List[Token] = [
+        Token(qt.OFFSET), Token(qt.NUMBER_LITERAL, offset_val), Token(qt.LIMIT),
+        Token(qt.NUMBER_LITERAL, limit_val), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.group_clause, s_mod.having_clause, s_mod.order_clause]
+    loc: LimitOffsetClause = s_mod.limit_offset_clause
+    assert not loc.limit_first
+    assert loc.limit == int(limit_val) and loc.offset == int(offset_val)
+
+    ''' LIMIT 100'''
+    limit_val = "100"
+    tokens: List[Token] = [
+        Token(qt.LIMIT), Token(qt.NUMBER_LITERAL, limit_val), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.group_clause, s_mod.having_clause, s_mod.order_clause]
+    loc: LimitOffsetClause = s_mod.limit_offset_clause
+    assert loc.limit_first
+    assert loc.limit == int(limit_val) and loc.offset is None
+
+    ''' OFFSET 10'''
+    offset_val = "10"
+    tokens: List[Token] = [
+        Token(qt.OFFSET), Token(qt.NUMBER_LITERAL, offset_val), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
+    assert [None, None, None] == [s_mod.group_clause, s_mod.having_clause, s_mod.order_clause]
+    loc: LimitOffsetClause = s_mod.limit_offset_clause
+    assert not loc.limit_first
+    assert loc.limit is None and loc.offset == int(offset_val)

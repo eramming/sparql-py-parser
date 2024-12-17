@@ -185,8 +185,8 @@ def test_parser_soln_modifiers() -> None:
         tok_queue.put(token)
     s_mod: SolnModifier = QueryParser().parse(tok_queue).select_query.soln_modifier
     gc: GroupClause = s_mod.group_clause
-    assert [len(gc.built_in_calls), len(gc.derived_vars), len(gc.vars)] == [1, 1, 2]
-    assert isinstance(gc.built_in_calls[0], Function) and gc.built_in_calls[0].func_name == "UCASE"
+    assert [len(gc.expressions), len(gc.derived_vars), len(gc.vars)] == [1, 1, 2]
+    assert isinstance(gc.expressions[0], Function) and gc.expressions[0].func_name == "UCASE"
     add_expr: MultiExprExpr = gc.derived_vars[c]
     assert isinstance(add_expr, MultiExprExpr)
     assert add_expr.l_expr.stringified_val == c1 and add_expr.r_expr.stringified_val == c2
