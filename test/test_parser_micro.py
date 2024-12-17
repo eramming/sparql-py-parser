@@ -114,16 +114,69 @@ def test_parser_built_in_call_regex() -> None:
 def test_parser_built_in_call_substr() -> None:
     ''' SUBSTR("HiddenHi!", 7)
         SUBSTR("HidHi!den", 4, 3)'''
-    raise NotImplementedError()
+    word1, word2, start1, start2, length = "HiddenHi!", "HidHi!den", "7", "4", "3"
+    tokens: List[Token] = [
+        Token(qt.SUBSTR), Token(qt.LPAREN), Token(qt.STRING_LITERAL, word1), Token(qt.COMMA),
+        Token(qt.NUMBER_LITERAL, start1), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(func, Function)
+    assert func.func_name == "SUBSTR"
+    assert [v.stringified_val for v in func.args] == [word1, start1]
+
+    tokens = [Token(qt.SUBSTR), Token(qt.LPAREN), Token(qt.STRING_LITERAL, word2),
+              Token(qt.COMMA), Token(qt.NUMBER_LITERAL, start2), Token(qt.COMMA),
+              Token(qt.NUMBER_LITERAL, length), Token(qt.RPAREN)]
+    tok_queue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(func, Function)
+    assert func.func_name == "SUBSTR"
+    assert [v.stringified_val for v in func.args] == [word2, start2, length]
     
 def test_parser_built_in_call_replace() -> None:
     ''' REPLACE(?var, " ", "")
         REPLACE(?var, "REMOVE", "", "i")'''
-    raise NotImplementedError()
+    var, space, empty, remove, flag = "?var", " ", "", "REMOVE", "i"
+    tokens: List[Token] = [
+        Token(qt.REPLACE), Token(qt.LPAREN), Token(qt.VARIABLE, var), Token(qt.COMMA),
+        Token(qt.STRING_LITERAL, space), Token(qt.COMMA), Token(qt.STRING_LITERAL, empty),
+        Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(func, Function)
+    assert func.func_name == "REPLACE"
+    assert [v.stringified_val for v in func.args] == [var, space, empty]
+
+    tokens = [
+        Token(qt.REPLACE), Token(qt.LPAREN), Token(qt.VARIABLE, var), Token(qt.COMMA),
+        Token(qt.STRING_LITERAL, remove), Token(qt.COMMA), Token(qt.STRING_LITERAL, empty),
+        Token(qt.COMMA), Token(qt.STRING_LITERAL, flag),Token(qt.RPAREN)]
+    tok_queue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(func, Function)
+    assert func.func_name == "REPLACE"
+    assert [v.stringified_val for v in func.args] == [var, remove, empty, flag]
     
 def test_parser_built_in_call_unary_function() -> None:
     ''' CEIL(?price)'''
-    raise NotImplementedError()
+    price = "?price"
+    tokens: List[Token] = [
+        Token(qt.CEIL), Token(qt.LPAREN), Token(qt.VARIABLE, price), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    func = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(func, Function)
+    assert func.func_name == "CEIL"
+    assert [v.stringified_val for v in func.args] == [price]
 
 def test_parser_aggregate() -> None:
     raise NotImplementedError()
