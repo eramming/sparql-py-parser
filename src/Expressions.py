@@ -64,33 +64,33 @@ class Function(Expression):
 class AggregateFunction(Function):
 
     def __init__(self, func_name: str, arg: Expression,
-                 has_distinct_flag: bool = False):
+                 is_distinct: bool = False):
         super().__init__(func_name, [arg])
-        self.has_distinct_flag: bool = has_distinct_flag
+        self.is_distinct: bool = is_distinct
 
     def set_distinct_flag(self) -> None:
-        self.has_distinct_flag = True
+        self.is_distinct = True
 
     def __format__(self, format_spec):
         self.__str__()
     
     def __str__(self):
-        distinct: str = "DISTINCT " if self.has_distinct_flag else ""
+        distinct: str = "DISTINCT " if self.is_distinct else ""
         return f"{self.func_name.upper()}({distinct}{self.args[0]})"
     
 
 class GroupConcatFunction(AggregateFunction):
 
-    def __init__(self, arg: Expression, has_distinct_flag: bool = False,
+    def __init__(self, arg: Expression, is_distinct: bool = False,
                  separator: str = None):
-        super().__init__(QueryTerm.GROUP_CONCAT.value, arg, has_distinct_flag)
+        super().__init__(QueryTerm.GROUP_CONCAT.value, arg, is_distinct)
         self.separator = separator
 
     def __format__(self, format_spec):
         self.__str__()
     
     def __str__(self):
-        distinct: str = "DISTINCT " if self.has_distinct_flag else ""
+        distinct: str = "DISTINCT " if self.is_distinct else ""
         separator_str: str = f"; SEPARATOR='{self.separator}'" if self.separator else ""
         return f"{self.func_name.upper()}({distinct}{self.args[0]}{separator_str})"
 

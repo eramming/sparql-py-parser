@@ -3,7 +3,7 @@ from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause, \
     DatasetClause, WhereClause, GroupGraphPatternSub, TriplesBlock, Filter, \
     GraphGraphPattern, SubSelect, MultiExprExpr, IdentityFunction, SolnModifier, \
     GroupClause, Function, OrderClause, LimitOffsetClause, HavingClause, ExprOp, \
-    ExistenceExpr
+    ExistenceExpr, AggregateFunction
 from typing import List, Any
 
 def test_parser_base_decl() -> None:
@@ -156,7 +156,7 @@ def test_parser_built_in_call_replace() -> None:
     tokens = [
         Token(qt.REPLACE), Token(qt.LPAREN), Token(qt.VARIABLE, var), Token(qt.COMMA),
         Token(qt.STRING_LITERAL, remove), Token(qt.COMMA), Token(qt.STRING_LITERAL, empty),
-        Token(qt.COMMA), Token(qt.STRING_LITERAL, flag),Token(qt.RPAREN)]
+        Token(qt.COMMA), Token(qt.STRING_LITERAL, flag), Token(qt.RPAREN)]
     tok_queue = LookaheadQueue()
     tok_queue.put_all(tokens)
     built_in_term: qt = tok_queue.get_now().term
@@ -178,8 +178,136 @@ def test_parser_built_in_call_unary_function() -> None:
     assert func.func_name == "CEIL"
     assert [v.stringified_val for v in func.args] == [price]
 
-def test_parser_aggregate() -> None:
-    raise NotImplementedError()
+def test_parser_aggregate_count() -> None:
+    ''' COUNT(DISTINCT *)
+        COUNT(?names)'''
+    names = "?names"
+    tokens: List[Token] = [
+        Token(qt.COUNT), Token(qt.LPAREN), Token(qt.DISTINCT), Token(qt.ASTERISK),
+        Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "COUNT"
+    assert aggr.is_distinct
+    assert [v.stringified_val for v in aggr.args] == ["*"]
+
+    tokens = [
+        Token(qt.COUNT), Token(qt.LPAREN), Token(qt.VARIABLE, names),
+        Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "COUNT"
+    assert not aggr.is_distinct
+    assert [v.stringified_val for v in aggr.args] == [names]
+
+def test_parser_aggregate_sum() -> None:
+    ''' SUM(?fees + (?cost * ?int_rate))'''
+    fees, cost, int_rate = "?fees", "?cost", "?int_rate"
+    tokens: List[Token] = [
+        Token(qt.SUM), Token(qt.LPAREN), Token(qt.VARIABLE, fees),
+        Token(qt.ADD), Token(qt.LPAREN), Token(qt.VARIABLE, cost), Token(qt.ASTERISK),
+        Token(qt.VARIABLE, int_rate), Token(qt.RPAREN), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "SUM"
+    assert not aggr.is_distinct
+    assert len(aggr.args) == 1 and isinstance(aggr.args[0], MultiExprExpr)
+    assert aggr.args[0].l_expr.stringified_val == fees
+    assert aggr.args[0].expr_op is ExprOp.ADD
+    assert isinstance(aggr.args[0].r_expr, IdentityFunction) and isinstance(aggr.args[0].r_expr.args[0], MultiExprExpr)
+    assert aggr.args[0].r_expr.args[0].l_expr.stringified_val == cost
+    assert aggr.args[0].r_expr.args[0].expr_op is ExprOp.MULT
+    assert aggr.args[0].r_expr.args[0].r_expr.stringified_val == int_rate
+    
+def test_parser_aggregate_min() -> None:
+    ''' MIN(DISTINCT FLOOR(?cost))'''
+    cost = "?cost"
+    tokens: List[Token] = [
+        Token(qt.MIN), Token(qt.LPAREN), Token(qt.DISTINCT), Token(qt.FLOOR),
+        Token(qt.LPAREN), Token(qt.VARIABLE, cost), Token(qt.RPAREN), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "MIN"
+    assert aggr.is_distinct
+    assert isinstance(aggr.args[0], Function) and aggr.args[0].func_name == "FLOOR"
+    assert [v.stringified_val for v in aggr.args[0].args] == [cost]
+
+def test_parser_aggregate_max() -> None:
+    ''' MAX(STRLEN(?names))'''
+    names = "?names"
+    tokens: List[Token] = [
+        Token(qt.MAX), Token(qt.LPAREN), Token(qt.STRLEN), Token(qt.LPAREN),
+        Token(qt.VARIABLE, names), Token(qt.RPAREN), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "MAX"
+    assert not aggr.is_distinct
+    assert isinstance(aggr.args[0], Function) and aggr.args[0].func_name == "STRLEN"
+    assert [v.stringified_val for v in aggr.args[0].args] == [names]
+
+def test_parser_aggregate_avg() -> None:
+    ''' AVG(DISTINCT ?int_rate)'''
+    int_rate = "?int_rate"
+    tokens: List[Token] = [
+        Token(qt.AVG), Token(qt.LPAREN), Token(qt.DISTINCT),
+        Token(qt.VARIABLE, int_rate), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "AVG"
+    assert aggr.is_distinct
+    assert [v.stringified_val for v in aggr.args] == [int_rate]
+
+def test_parser_aggregate_sample() -> None:
+    ''' SAMPLE(DISTINCT ((?names)))'''
+    names = "?names"
+    tokens: List[Token] = [
+        Token(qt.SAMPLE), Token(qt.LPAREN), Token(qt.DISTINCT),
+        Token(qt.LPAREN), Token(qt.LPAREN), Token(qt.VARIABLE, names),
+        Token(qt.RPAREN), Token(qt.RPAREN), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    aggr = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(aggr, AggregateFunction)
+    assert aggr.func_name == "SAMPLE"
+    assert aggr.is_distinct
+    assert isinstance(aggr.args[0], IdentityFunction) and isinstance(aggr.args[0].args[0], IdentityFunction)
+    assert [v.stringified_val for v in aggr.args[0].args[0].args] == [names]
+
+def test_parser_aggregate_group_concat() -> None:
+    ''' GROUP_CONCAT(?names;SEPARATOR="->")'''
+    names, sep = "?names", "->"
+    tokens: List[Token] = [
+        Token(qt.GROUP_CONCAT), Token(qt.LPAREN), Token(qt.VARIABLE, names),
+        Token(qt.SEMI_COLON), Token(qt.SEPARATOR), Token(qt.EQUALS),
+        Token(qt.STRING_LITERAL, sep), Token(qt.RPAREN)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    built_in_term: qt = tok_queue.get_now().term
+    gc_func = QueryParser().built_in_call(built_in_term, tok_queue)
+    assert isinstance(gc_func, GroupConcatFunction)
+    assert gc_func.func_name == "GROUP_CONCAT"
+    assert not gc_func.is_distinct
+    assert [v.stringified_val for v in gc_func.args] == [names]
+    assert gc_func.separator == sep
 
 def test_parser_expr_list() -> None:
     raise NotImplementedError()

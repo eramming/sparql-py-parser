@@ -57,7 +57,7 @@ def test_parser_select_clause() -> None:
     assert sub_attr in select_clause.derived_vars
     gc_func: GroupConcatFunction = select_clause.derived_vars[sub_attr]
     assert isinstance(gc_func, GroupConcatFunction)
-    assert gc_func.has_distinct_flag
+    assert gc_func.is_distinct
     assert isinstance(gc_func.args[0], TerminalExpr)
     assert gc_func.args[0].stringified_val == concat_subj_attr
     assert gc_func.separator == sep
