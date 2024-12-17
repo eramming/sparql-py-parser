@@ -3,7 +3,7 @@ from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause, \
     DatasetClause, WhereClause, GroupGraphPatternSub, TriplesBlock, Filter, \
     GraphGraphPattern, SubSelect, MultiExprExpr, IdentityFunction, SolnModifier, \
     GroupClause, Function, OrderClause, LimitOffsetClause, HavingClause, ExprOp, \
-    ExistenceExpr, AggregateFunction
+    ExistenceExpr, AggregateFunction, Expression
 from typing import List, Any
 
 def test_parser_base_decl() -> None:
@@ -310,10 +310,49 @@ def test_parser_aggregate_group_concat() -> None:
     assert gc_func.separator == sep
 
 def test_parser_expr_list() -> None:
-    raise NotImplementedError()
+    ''' ?var1, UCASE(?var2)'''
+    v1, v2 = "?var1", "?var2"
+    tokens: List[Token] = [
+        Token(qt.VARIABLE, v1), Token(qt.COMMA), Token(qt.UCASE),
+        Token(qt.LPAREN), Token(qt.VARIABLE, v2), Token(qt.RPAREN), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    exprs: List[Expression] = QueryParser().expression_list(tok_queue, 2, 2)
+    assert len(exprs) == 2 and isinstance(exprs[1], Function)
+    assert exprs[0].stringified_val == v1 and exprs[1].func_name == "UCASE"
+    
+    ''' ?var1'''
+    v1 = "?var1"
+    tokens = [Token(qt.VARIABLE, v1), Token(qt.EOF)]
+    tok_queue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    exprs = QueryParser().expression_list(tok_queue, 1, 5)
+    assert len(exprs) == 1 and exprs[0].stringified_val == v1
+
+    ''' ?var1'''
+    tok_queue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    try:
+        exprs = QueryParser().expression_list(tok_queue, 3, 4)
+        assert False
+    except ValueError:
+        pass
 
 def test_parser_iri() -> None:
-    raise NotImplementedError()
+    ''' <http://ex.com/area> ex: : ex:Word :Word'''
+    iriref, ex, word = "<http://ex.com/area>", "ex", "Word"
+    tok_list_of_lists: List[Token] = [
+        [Token(qt.IRIREF, iriref)],
+        [Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON), Token(qt.EOF)],
+        [Token(qt.COLON), Token(qt.EOF)],
+        [Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, word)],
+        [Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, word)]]
+    expected: List[str] = [iriref, f"{ex}:", ":", f"{ex}:{word}", f":{word}"]
+    for tokens, expected_iri in zip(tok_list_of_lists, expected):
+        tok_queue: LookaheadQueue = LookaheadQueue()
+        tok_queue.put_all(tokens)
+        iri: str = QueryParser().iri(tok_queue)
+        assert iri == expected_iri
 
 def test_parser_var_or_term() -> None:
     raise NotImplementedError()
