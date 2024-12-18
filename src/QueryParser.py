@@ -471,7 +471,7 @@ class QueryParser:
             # Verb/Obj_list logic:
             if tokens.lookahead().term in verb_starters:
                 verb, objs = self.property_list_path_not_empty_helper(tokens)
-                pred_to_objs[verb].union(objs)
+                pred_to_objs[verb] = pred_to_objs[verb].union(objs)
         return pred_to_objs
     
     def property_list_path_not_empty_helper(self, tokens: LookaheadQueue) -> Tuple[Verb, Set[str]]:
@@ -521,7 +521,7 @@ class QueryParser:
         
     '''ObjectListPath ::= VarOrTerm ( ',' VarOrTerm )* '''
     def object_list(self, tokens: LookaheadQueue) -> Set[str]:
-        objs: Set[str] = set(self.var_or_term(tokens))
+        objs: Set[str] = set([self.var_or_term(tokens)])
         while tokens.lookahead().term is QueryTerm.COMMA:
             tokens.get_now()
             objs.add(self.var_or_term(tokens))

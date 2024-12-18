@@ -2,7 +2,7 @@ from src import QueryParser, LookaheadQueue, Prologue, GroupConcatFunction, Toke
     QueryTerm as qt, TriplesBlock, MultiExprExpr, IdentityFunction, SolnModifier, \
     GroupClause, Function, OrderClause, LimitOffsetClause, HavingClause, ExprOp, \
     ExistenceExpr, AggregateFunction, Expression, Verb, VarVerb, IdentityVerbPath, \
-    MultiPathVerbPath, InverseVerbPath, ElementVerbPath
+    MultiPathVerbPath, InverseVerbPath, ElementVerbPath, PathOp, PathMod, VerbPath
 from typing import List, Any, Dict, Set
 
 def test_parser_base_decl() -> None:
@@ -380,19 +380,53 @@ def test_parser_property_list_path_not_empty() -> None:
         Token(qt.VARIABLE, pred), Token(qt.STRING_LITERAL, taco), Token(qt.COMMA),
         Token(qt.STRING_LITERAL, fajita), Token(qt.SEMI_COLON), Token(qt.A),
         Token(qt.PIPE), Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON),
-        Token(qt.PREFIXED_NAME_LOCAL, drink), Token(qt.STRING_LITERAL, lemonade)]
+        Token(qt.PREFIXED_NAME_LOCAL, drink), Token(qt.STRING_LITERAL, lemonade), Token(qt.EOF)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     props: Dict[Verb, Set[str]] = QueryParser().property_list_path_not_empty(tok_queue)
     assert len(props) == 2
-    assert isinstance(gc_func, GroupConcatFunction)
-    assert gc_func.func_name == "GROUP_CONCAT"
-    assert not gc_func.is_distinct
-    assert [v.stringified_val for v in gc_func.args] == [names]
-    assert gc_func.separator == sep
-
+    keys: List[Verb] = list(props.keys())
+    var_verb: VarVerb = None
+    path_verb: MultiPathVerbPath = None
+    if isinstance(keys[0], VarVerb):
+        assert isinstance(keys[1], MultiPathVerbPath)
+        var_verb, path_verb = keys[0], keys[1]
+    elif isinstance(keys[1], VarVerb):
+        assert isinstance(keys[0], MultiPathVerbPath)
+        var_verb, path_verb = keys[1], keys[0]
+    else:
+        raise ValueError("Expected one of the verbs to be VarVerb")
+    assert props[var_verb] == set([taco, fajita])
+    assert props[path_verb] == set([lemonade])
+    assert path_verb.path_op is PathOp.OR
+    assert path_verb.l_path.stringified_val == "a" and path_verb.r_path.stringified_val == f"{ex}:{drink}"
+    
 def test_parser_verb_path() -> None:
-    raise NotImplementedError()
+    ''' (:food|^a/<http://ex.com/has_gift>/(ex:drink))|^(ex:inedible)'''
+    ex, food, has_gift, drink, inedible = "ex", "food", "<http://ex.com/has_gift>", "drink", "inedible"
+    tokens: List[Token] = [
+        Token(qt.LPAREN), Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, food),
+        Token(qt.PIPE), Token(qt.CARAT), Token(qt.A), Token(qt.DIV), Token(qt.IRIREF, has_gift),
+        Token(qt.DIV), Token(qt.LPAREN), Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON),
+        Token(qt.PREFIXED_NAME_LOCAL, drink), Token(qt.RPAREN), Token(qt.RPAREN),
+        Token(qt.PIPE), Token(qt.CARAT), Token(qt.LPAREN), Token(qt.PREFIXED_NAME_PREFIX, ex),
+        Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, inedible), Token(qt.RPAREN), Token(qt.EOF)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    vp: VerbPath = QueryParser().verb_path(tok_queue)
+    assert isinstance(vp, MultiPathVerbPath) and isinstance(vp.l_path, IdentityVerbPath)
+    assert isinstance(vp.r_path, InverseVerbPath) and isinstance(vp.r_path.verb_path, IdentityVerbPath)
+    assert vp.r_path.verb_path.verb_path.stringified_val == f"{ex}:{inedible}"
+    assert isinstance(vp.l_path.verb_path, MultiPathVerbPath)
+    assert vp.l_path.verb_path.l_path.stringified_val == f":{food}" and vp.l_path.verb_path.path_op is PathOp.OR
+    multi: MultiPathVerbPath = vp.l_path.verb_path.r_path
+    assert isinstance(multi, MultiPathVerbPath) and multi.path_op is PathOp.SLASH
+    assert isinstance(multi.l_path, InverseVerbPath) and multi.l_path.verb_path.stringified_val == "a"
+    multi = multi.r_path
+    assert isinstance(multi, MultiPathVerbPath) and multi.path_op is PathOp.SLASH
+    assert multi.l_path.stringified_val == has_gift
+    iden = multi.r_path
+    assert isinstance(iden, IdentityVerbPath) and iden.verb_path.stringified_val == f"{ex}:{drink}"
 
 def test_parser_group_condition() -> None:
     ''' GROUP BY (UCASE(?lName)) FLOOR(?age)  ?country (?x + ?y AS ?z)'''
