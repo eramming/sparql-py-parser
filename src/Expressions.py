@@ -24,11 +24,23 @@ class TerminalExpr(Expression):
         super().__init__()
         self.stringified_val: str = stringified_val
 
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return self.stringified_val
+
 class NegationExpr(Expression):
 
     def __init__(self, expr: Expression):
         super().__init__()
         self.expr: Expression = expr
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return f"!{self.expr}"
 
 
 class MultiExprExpr(Expression):
@@ -38,6 +50,12 @@ class MultiExprExpr(Expression):
         self.l_expr: Expression = l_expr
         self.r_expr: Expression = r_expr
         self.expr_op: ExprOp = expr_op
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return f"{self.l_expr} {self.expr_op.value} {self.r_expr}"
 
 
 class Function(Expression):

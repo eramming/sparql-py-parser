@@ -19,7 +19,9 @@ from .ExistenceExpr import ExistenceExpr
 from .ExprOp import ExprOp
 from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, LimitOffsetClause
 from .SubSelect import SubSelect
-from .Verbs import Verb, VerbPath, VarVerb
+from .Verbs import Verb, VerbPath, VarVerb, IdentityVerbPath, InverseVerbPath, \
+    MultiPathVerbPath, TerminalVerbPath, ElementVerbPath
+from .PathEnums import PathMod, PathOp
 from .tokens import QueryTerm, Token, Tokenizer
 
 

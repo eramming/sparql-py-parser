@@ -1,10 +1,9 @@
-from src import QueryParser, Query, LookaheadQueue, Prologue, SelectClause, \
-    GroupConcatFunction, TerminalExpr, Tokenizer, Token, QueryTerm as qt, \
-    DatasetClause, WhereClause, GroupGraphPatternSub, TriplesBlock, Filter, \
-    GraphGraphPattern, SubSelect, MultiExprExpr, IdentityFunction, SolnModifier, \
+from src import QueryParser, LookaheadQueue, Prologue, GroupConcatFunction, Token, \
+    QueryTerm as qt, TriplesBlock, MultiExprExpr, IdentityFunction, SolnModifier, \
     GroupClause, Function, OrderClause, LimitOffsetClause, HavingClause, ExprOp, \
-    ExistenceExpr, AggregateFunction, Expression
-from typing import List, Any
+    ExistenceExpr, AggregateFunction, Expression, Verb, VarVerb, IdentityVerbPath, \
+    MultiPathVerbPath, InverseVerbPath, ElementVerbPath
+from typing import List, Any, Dict, Set
 
 def test_parser_base_decl() -> None:
     '''BASE <http://ex.com/>'''
@@ -355,9 +354,44 @@ def test_parser_iri() -> None:
         assert iri == expected_iri
 
 def test_parser_var_or_term() -> None:
-    raise NotImplementedError()
+    ''' <http://ex.com/area> :Word ?var "lit" true 17 false'''
+    iriref, word, var, lit, num = "<http://ex.com/area>", "Word", "?var", "lit", "17"
+    tok_list_of_lists: List[Token] = [
+        [Token(qt.IRIREF, iriref)],
+        [Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, word)],
+        [Token(qt.VARIABLE, var)],
+        [Token(qt.STRING_LITERAL, lit)],
+        [Token(qt.TRUE)],
+        [Token(qt.NUMBER_LITERAL, num)],
+        [Token(qt.FALSE)]]
+    expected: List[str] = [iriref, f":{word}", var, lit, "true", num, "false"]
+    for tokens, expected_iri in zip(tok_list_of_lists, expected):
+        tok_queue: LookaheadQueue = LookaheadQueue()
+        tok_queue.put_all(tokens)
+        iri: str = QueryParser().var_or_term(tok_queue)
+        assert iri == expected_iri
 
 def test_parser_property_list_path_not_empty() -> None:
+    ''' ?pred "taco", "fajita" ;
+        a|ex:drink "lemonade"
+        '''
+    pred, taco, fajita, ex, drink, lemonade = "?pred", "taco", "fajita", "ex", "drink", "lemonade"
+    tokens: List[Token] = [
+        Token(qt.VARIABLE, pred), Token(qt.STRING_LITERAL, taco), Token(qt.COMMA),
+        Token(qt.STRING_LITERAL, fajita), Token(qt.SEMI_COLON), Token(qt.A),
+        Token(qt.PIPE), Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON),
+        Token(qt.PREFIXED_NAME_LOCAL, drink), Token(qt.STRING_LITERAL, lemonade)]
+    tok_queue: LookaheadQueue = LookaheadQueue()
+    tok_queue.put_all(tokens)
+    props: Dict[Verb, Set[str]] = QueryParser().property_list_path_not_empty(tok_queue)
+    assert len(props) == 2
+    assert isinstance(gc_func, GroupConcatFunction)
+    assert gc_func.func_name == "GROUP_CONCAT"
+    assert not gc_func.is_distinct
+    assert [v.stringified_val for v in gc_func.args] == [names]
+    assert gc_func.separator == sep
+
+def test_parser_verb_path() -> None:
     raise NotImplementedError()
 
 def test_parser_group_condition() -> None:

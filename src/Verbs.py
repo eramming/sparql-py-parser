@@ -1,4 +1,6 @@
 from uuid import uuid4
+from typing import List
+from .PathEnums import PathOp, PathMod
 
 class Verb:
 
@@ -17,34 +19,82 @@ class Verb:
         return False
     
 
-class VerbPath(Verb):
+class VerbPath:
 
-    def __init__(self, verb: str = None, verb_path: 'VerbPath' = None):
+    def __init__(self):
+        pass
+
+
+class UnaryVerbPath(VerbPath):
+
+    def __init__(self, verb_path: VerbPath):
         super().__init__()
-        if verb is not None and verb_path is not None:
-            raise ValueError("Can only have 1 of [verb, VerbPath]")
         self.verb_path: VerbPath = verb_path
-        self.verb: str = verb
 
-    def get_verb(self) -> str:
-        return self.verb
 
-    def set_verb_path(self, verb_path: 'VerbPath') -> None:
-        self.verb_path = verb_path
-        self.verb = None
+class IdentityVerbPath(UnaryVerbPath):
 
-    def set_verb(self, verb: str) -> None:
-        self.verb = verb
-        self.verb_path = None
+    def __init__(self, verb_path: VerbPath):
+        super().__init__(verb_path)
 
-    def __str__(self):
-        if self.verb:
-            return self.verb
-        else:
-            return f"( {self.verb_path} )"
-    
     def __format__(self, format_spec):
-        return self.__str__()
+        self.__str__()
+    
+    def __str__(self):
+        return f"({self.verb_path})"
+
+    
+class MultiPathVerbPath(VerbPath):
+
+    def __init__(self, l_path: VerbPath, r_path: VerbPath, path_op: PathOp):
+        super().__init__()
+        self.l_path: VerbPath = l_path
+        self.r_path: VerbPath = r_path
+        self.path_op: PathOp = path_op
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return f"{self.l_path} {self.path_op.value} {self.r_path}"
+
+
+class InverseVerbPath(UnaryVerbPath):
+
+    def __init__(self, verb_path: VerbPath):
+        super().__init__(verb_path)
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return f"^{self.verb_path}"
+
+
+class ElementVerbPath(UnaryVerbPath):
+
+    def __init__(self, verb_path: VerbPath, path_mod: PathMod):
+        super().__init__(verb_path)
+        self.path_mod: PathMod = path_mod
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return f"{self.verb_path}{self.path_mod.value}"
+
+
+class TerminalVerbPath(VerbPath):
+
+    def __init__(self, stringified_val: str):
+        super().__init__()
+        self.stringified_val: str = stringified_val
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        return self.stringified_val
 
 
 class VarVerb(Verb):

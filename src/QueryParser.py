@@ -13,7 +13,9 @@ from .SolnModifier import SolnModifier, GroupClause, HavingClause, OrderClause, 
 from .SubSelect import SubSelect
 from .TriplesBlock import TriplesBlock
 from .TriplesSameSubj import TriplesSameSubj
-from .Verbs import Verb, VerbPath, VarVerb
+from .Verbs import Verb, VerbPath, VarVerb, MultiPathVerbPath, IdentityVerbPath, \
+    InverseVerbPath, ElementVerbPath, TerminalVerbPath
+from .PathEnums import PathMod, PathOp
 from .DatasetClause import DatasetClause
 from .WhereClause import WhereClause
 from .Prologue import Prologue
@@ -412,7 +414,7 @@ class QueryParser:
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
             self.throw_error([QueryTerm.LPAREN] + built_in_qts, tokens.lookahead())
     
-    '''TriplesBlock ::= TriplesSameSubjectPath '''
+    '''TriplesBlock ::= TriplesSameSubjectPath ('.' TriplesBlock?)? '''
     def triples_block(self, tokens: LookaheadQueue, triples_block: TriplesBlock) -> TriplesBlock:
         triples_block.add_triples_same_subj(self.triples_same_subj(tokens))
         if tokens.lookahead().term is QueryTerm.PERIOD:
@@ -431,23 +433,28 @@ class QueryParser:
     
     '''VarOrTerm ::= Var | iri | StringLiteral | NumericLiteral | BooleanLiteral '''
     def var_or_term(self, tokens: LookaheadQueue) -> str:
-        next_tok: Token = tokens.get_now()
-        if next_tok.term is QueryTerm.VARIABLE:
-            return next_tok.content
-        elif next_tok.term is QueryTerm.STRING_LITERAL:
-            return next_tok.content
-        elif next_tok.term is QueryTerm.NUMBER_LITERAL:
-            return next_tok.content
-        elif next_tok.term is QueryTerm.TRUE:
+        lookahead: Token = tokens.lookahead()
+        if lookahead.term is QueryTerm.VARIABLE:
+            tokens.get_now()
+            return lookahead.content
+        elif lookahead.term is QueryTerm.STRING_LITERAL:
+            tokens.get_now()
+            return lookahead.content
+        elif lookahead.term is QueryTerm.NUMBER_LITERAL:
+            tokens.get_now()
+            return lookahead.content
+        elif lookahead.term is QueryTerm.TRUE:
+            tokens.get_now()
             return "true"
-        elif next_tok.term is QueryTerm.FALSE:
+        elif lookahead.term is QueryTerm.FALSE:
+            tokens.get_now()
             return "false"
-        elif next_tok.term in [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]:
+        elif lookahead.term in [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]:
             return self.iri(tokens)
         else:
             self.throw_error([QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.TRUE, QueryTerm.FALSE,
                               QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.STRING_LITERAL,
-                              QueryTerm.NUMBER_LITERAL], next_tok)
+                              QueryTerm.NUMBER_LITERAL], lookahead)
 
     '''PropertyListPathNotEmpty ::= ( VerbPath | Var ) ObjectList
                                     ( ';' ( ( VerbPath | Var ) ObjectList )? )*'''
@@ -480,22 +487,38 @@ class QueryParser:
         objs = self.object_list(tokens)
         return (verb, objs)
         
-    '''VerbPath ::= iri | 'a' | '(' Path ')' '''
+    '''VerbPath ::= iri | 'a' | '(' VerbPath ')' '''
     def verb_path(self, tokens: LookaheadQueue) -> VerbPath:
         iri_terms: List[QueryTerm] = [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        vp: VerbPath = None
+
+        is_inverse: bool = False
+        if tokens.lookahead().term is QueryTerm.CARAT:
+            is_inverse = True
+            tokens.get_now()
+
         lookahead: Token = tokens.lookahead()
         if lookahead.term is QueryTerm.A:
             tokens.get_now()
-            return VerbPath(verb="a")
+            vp = TerminalVerbPath("a")
         elif lookahead.term in iri_terms:
-            return VerbPath(verb=self.iri(tokens))
+            vp = TerminalVerbPath(self.iri(tokens))
         elif lookahead.term is QueryTerm.LPAREN:
             tokens.get_now()
-            vp: VerbPath = VerbPath(verb_path=self.verb_path(tokens))
+            vp = IdentityVerbPath(self.verb_path(tokens))
             assert tokens.get_now().term is QueryTerm.RPAREN
-            return vp
-        self.throw_error([QueryTerm.A, QueryTerm.LPAREN] + iri_terms, lookahead)
-    
+        else:
+            self.throw_error([QueryTerm.A, QueryTerm.LPAREN] + iri_terms, lookahead)
+        
+        if tokens.lookahead().term in [QueryTerm.QUESTION, QueryTerm.ADD, QueryTerm.ASTERISK]:
+            vp = ElementVerbPath(vp, PathMod(tokens.get_now().term.value))
+        if is_inverse:
+            vp = InverseVerbPath(vp)
+        if tokens.lookahead().term in [QueryTerm.PIPE, QueryTerm.DIV]:
+            path_op: PathOp = PathOp(tokens.get_now().term.value)
+            vp = MultiPathVerbPath(vp, self.verb_path(tokens), path_op)
+        return vp
+        
     '''ObjectListPath ::= VarOrTerm ( ',' VarOrTerm )* '''
     def object_list(self, tokens: LookaheadQueue) -> Set[str]:
         objs: Set[str] = set(self.var_or_term(tokens))
