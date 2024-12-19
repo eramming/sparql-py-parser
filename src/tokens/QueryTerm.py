@@ -2,14 +2,20 @@ from enum import Enum
 from typing import List
 
 NON_KEYWORD_TERMS: List[str] = [
-    "IRIREF", "PREFIXED_NAME_PREFIX", "PREFIXED_NAME_LOCAL", "VARIABLE",
-    "STRING_LITERAL", "NUMBER_LITERAL", "EOF"
+    "IRIREF_CONTENT", "PREFIXED_NAME_PREFIX", "PREFIXED_NAME_LOCAL", "VARIABLE",
+    "STRING_LITERAL", "U_NUMBER_LITERAL", "EOF"
 ]
 BUILT_IN_CALLS: List[str] = [
     "COUNT", "SUM", "MIN", "MAX", "AVG", "SAMPLE", "GROUP_CONCAT", "REGEX",
     "SUBSTR", "REPLACE", "EXISTS", "NOT", "ABS", "CEIL", "FLOOR", "ROUND",
     "CONCAT", "STRLEN", "UCASE", "LCASE"
 ]
+BRACKETTED_TERMS: List[str] = [
+    "WHERE", "OPTIONAL", "UNION", "MINUS"
+]
+PARENTHIZED_TERMS: List[str] = [
+    "SELECT", "DISTINCT", "FILTER", "BIND", "BY", "HAVING", "ASC", "DESC"
+] + BUILT_IN_CALLS
 
 class QueryTerm(Enum):
     RPAREN = ")"
@@ -22,7 +28,7 @@ class QueryTerm(Enum):
     PIPE = "|"
     BASE = "BASE"
     PREFIX = "PREFIX"
-    IRIREF = "IRIREF"
+    IRIREF_CONTENT = "IRIREF_CONTENT"
     PREFIXED_NAME_PREFIX = "PREFIXED_NAME_PREFIX"
     PREFIXED_NAME_LOCAL = "PREFIXED_NAME_LOCAL"
     COLON = ":"
@@ -40,7 +46,7 @@ class QueryTerm(Enum):
     DISTINCT = "DISTINCT"
     AS = "AS"
     STRING_LITERAL = "STRING_LITERAL"
-    NUMBER_LITERAL = "NUMBER_LITERAL"
+    U_NUMBER_LITERAL = "U_NUMBER_LITERAL"
     TRUE = "TRUE"
     FALSE = "FALSE"
     NAMED = "NAMED"
@@ -84,7 +90,8 @@ class QueryTerm(Enum):
     DIV = "/"
     ADD = "+"
     SUB = "-"
-    AND = "&&"
+    LOGICAL_AND = "&&"
+    LOGICAL_OR = "||"
     LT = "<"
     GT = ">"
     G_OR_EQ = ">="
@@ -103,6 +110,21 @@ class QueryTerm(Enum):
     
     def built_in_calls() -> List[str]:
         return BUILT_IN_CALLS
+    
+    def parenable(keyword: str) -> bool:
+        if keyword.upper() in PARENTHIZED_TERMS:
+            return True
+        return False
+    
+    def bracketable(keyword: str) -> bool:
+        if keyword.upper() in BRACKETTED_TERMS:
+            return True
+        return False
+    
+    def equalable(keyword: str) -> bool:
+        if keyword.upper() == "SEPARATOR":
+            return True
+        return False
     
     def __str__(self):
         return self.name.lower()

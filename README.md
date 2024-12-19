@@ -85,6 +85,12 @@ this parsing library. Features left out include:
 * `ValuesClause`
 * `PathNegatedPropertySet`
 * `TriplesNodePath`
+* `Update`
+* This library requires a whitespace after `||` or `&&`
+  - This prevents conflation between iriref and expressions, but is not required by sparql 1.1
+  - E.g., which is 7<8&&8>7
+    * U_NUMBER_LITERAL, IRIREF, then U_NUMBER_LITERAL
+    * U_NUMBER_LITERAL, LT, U_NUMBER_LITERAL, LOGICAL_AND, U_NUMBER_LITERAL, GT, U_NUMBER_LITERAL
 
 
 

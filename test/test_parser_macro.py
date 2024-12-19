@@ -16,11 +16,11 @@ def test_parser_prologue() -> None:
     foaf: str = "http://xmlns.com/foaf/0.1/"
     rdf: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     tokens: List[Token] = [
-        Token(qt.BASE), Token(qt.IRIREF, base_iri), Token(qt.PREFIX),
+        Token(qt.BASE), Token(qt.IRIREF_CONTENT, base_iri), Token(qt.PREFIX),
         Token(qt.PREFIXED_NAME_PREFIX, "foaf"), Token(qt.COLON),
-        Token(qt.IRIREF, foaf), Token(qt.PREFIX),
+        Token(qt.IRIREF_CONTENT, foaf), Token(qt.PREFIX),
         Token(qt.PREFIXED_NAME_PREFIX, "rdf"), Token(qt.COLON),
-        Token(qt.IRIREF, rdf)]
+        Token(qt.IRIREF_CONTENT, rdf)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     for token in (tokens + SIMPLE_SELECT + SIMPLE_WHERE):
         tok_queue.put(token)
@@ -103,7 +103,7 @@ def test_parser_where_clause() -> None:
         Token(qt.VARIABLE, p2), Token(qt.PREFIXED_NAME_PREFIX, foaf), Token(qt.COLON),
         Token(qt.PREFIXED_NAME_LOCAL, nick), Token(qt.STRING_LITERAL, sqeej), Token(qt.PERIOD),
         Token(qt.FILTER), Token(qt.LPAREN), Token(qt.VARIABLE, age_var), Token(qt.EQUALS),
-        Token(qt.NUMBER_LITERAL, number), Token(qt.RPAREN), Token(qt.GRAPH), Token(qt.VARIABLE, my_graph),
+        Token(qt.U_NUMBER_LITERAL, number), Token(qt.RPAREN), Token(qt.GRAPH), Token(qt.VARIABLE, my_graph),
         Token(qt.LBRACKET), Token(qt.RBRACKET), Token(qt.VARIABLE, p3),
         Token(qt.PREFIXED_NAME_PREFIX, foaf), Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, nick),
         Token(qt.STRING_LITERAL, lucky), Token(qt.PERIOD), Token(qt.RBRACKET), Token(qt.EOF)]
@@ -174,11 +174,11 @@ def test_parser_soln_modifiers() -> None:
         Token(qt.VARIABLE, c1), Token(qt.ADD), Token(qt.VARIABLE, c2), Token(qt.AS),
         Token(qt.VARIABLE, c), Token(qt.RPAREN), Token(qt.VARIABLE, var3), Token(qt.HAVING),
         Token(qt.LPAREN), Token(qt.SUM), Token(qt.LPAREN), Token(qt.VARIABLE, price),
-        Token(qt.RPAREN), Token(qt.GT), Token(qt.NUMBER_LITERAL, ten), Token(qt.RPAREN),
+        Token(qt.RPAREN), Token(qt.GT), Token(qt.U_NUMBER_LITERAL, ten), Token(qt.RPAREN),
         Token(qt.ORDER), Token(qt.BY), Token(qt.DESC), Token(qt.LPAREN), Token(qt.SUM),
         Token(qt.LPAREN), Token(qt.VARIABLE, price), Token(qt.RPAREN), Token(qt.RPAREN),
-        Token(qt.LIMIT), Token(qt.NUMBER_LITERAL, ten),
-        Token(qt.OFFSET), Token(qt.NUMBER_LITERAL, one), Token(qt.EOF)
+        Token(qt.LIMIT), Token(qt.U_NUMBER_LITERAL, ten),
+        Token(qt.OFFSET), Token(qt.U_NUMBER_LITERAL, one), Token(qt.EOF)
     ]
     tok_queue: LookaheadQueue = LookaheadQueue()
     for token in (SIMPLE_SELECT + [Token(qt.LBRACKET), Token(qt.RBRACKET)] + tokens):

@@ -21,15 +21,44 @@ class Tokenizer:
         if len(query_str) == 0:
             tokens.put(Token(QueryTerm.EOF))
             return
-        matched: bool = self.tokenize_single_char_identifiers(query_str, tokens)
+        matched: bool = self.tokenize_binary_identifiers(query_str, tokens)
+        if not matched:
+            matched = self.tokenize_unary_identifiers(query_str, tokens)
         if not matched:
             matched = self.tokenize_keyword(query_str, tokens)
         if not matched:
             matched = self.tokenize_prefixed_name_prefix(query_str, tokens)
         if not matched:
             raise ValueError(f"Couldn't tokenize the remainder of the string:\n{query_str}")
-            
-    def tokenize_single_char_identifiers(self, query_str: str, tokens: LookaheadQueue) -> bool:
+
+    def tokenize_binary_identifiers(self, query_str: str, tokens: LookaheadQueue) -> bool:
+        matched: bool = True
+        binary_chars: str = query_str[0:2]
+        if binary_chars == "||":
+            tokens.put(Token(QueryTerm.LOGICAL_OR))
+            remainder: str = query_str[2:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif binary_chars == ">=":
+            tokens.put(Token(QueryTerm.G_OR_EQ))
+            remainder: str = query_str[2:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif binary_chars == "<=":
+            tokens.put(Token(QueryTerm.L_OR_EQ))
+            remainder: str = query_str[2:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif binary_chars == "!=":
+            tokens.put(Token(QueryTerm.NOT_EQ))
+            remainder: str = query_str[2:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif binary_chars == "&&":
+            tokens.put(Token(QueryTerm.LOGICAL_AND))
+            remainder: str = query_str[2:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        else:
+            matched = False
+        return matched
+
+    def tokenize_unary_identifiers(self, query_str: str, tokens: LookaheadQueue) -> bool:
         matched: bool = True
         first_letter: str = query_str[0]
         if first_letter == "{":
@@ -48,11 +77,41 @@ class Tokenizer:
             tokens.put(Token(QueryTerm.RPAREN))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
+        elif first_letter == "/":
+            tokens.put(Token(QueryTerm.DIV))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif first_letter == "*":
+            tokens.put(Token(QueryTerm.ASTERISK))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif first_letter == "+":
+            tokens.put(Token(QueryTerm.ADD))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif first_letter == "-":
+            tokens.put(Token(QueryTerm.MINUS))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        elif first_letter == "|":
+            tokens.put(Token(QueryTerm.PIPE))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
         elif first_letter == "<":
-            remainder: str = self.iri_ref_tokenizer(query_str, tokens)
+            remainder: str = None
+            pattern: str = "^<([^<>\"{}|^`\\]-[#x00-#x20])*>"
+            if :
+                remainder = self.iri_ref_tokenizer(query_str, tokens)
+            else:
+                remainder = a;ksdlfja
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "?":
-            remainder: str = self.variable_tokenizer(query_str[1:], tokens)
+            remainder: str = None
+            if re.search("[a-z0-9A-Z_]", query_str[1]): 
+                remainder = self.variable_tokenizer(query_str[1:], tokens)
+            else:
+                tokens.put(Token(QueryTerm.QUESTION))
+                remainder = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "!":
             tokens.put(Token(QueryTerm.EXCLAMATION))
@@ -78,60 +137,64 @@ class Tokenizer:
             tokens.put(Token(QueryTerm.EQUALS))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
-        elif first_letter == "*":
-            tokens.put(Token(QueryTerm.ASTERISK))
-            remainder: str = query_str[1:].lstrip()
-            self.tokenize_helper(remainder, tokens)
         elif first_letter == '"' or first_letter == "'":
             remainder: str = self.string_literal_tokenizer(query_str, tokens)
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "#":
+            raise NotImplementedError("Add logic to check if a '>' is on this line to "
+                                      "close an iriref. Maybe have a global variable "
+                                      "flag that tells us if we've seen a '<' on this line.")
             indx: int = re.search("(\r\n|\n)", query_str).end()
             if indx == -1:
                 tokens.put(Token(QueryTerm.EOF))
                 return
             self.tokenize_helper(query_str[indx:].lstrip(), tokens)
-        elif re.search("^(\\+?|-?)[0-9]+(\\.[0-9]*)?", query_str):
+        elif re.search("^[0-9]+(\\.[0-9]*)?", query_str):
             remainder: str = self.number_literal_tokenizer(query_str, tokens)
             self.tokenize_helper(remainder, tokens)
         else:
             matched = False
         return matched
         
-    def tokenize_keyword(self, query_str: str, tokens: LookaheadQueue) -> None:
-        match: Match = re.search("(\\S+)(\\s|$)", query_str)
+    def tokenize_keyword(self, query_str: str, tokens: LookaheadQueue) -> bool:
+        matched: bool = False
+        match: Match = re.search("^([a-zA-Z][a-zA-Z_]*)(\\(|{|=|\\s|$)", query_str)
         if not match:
             return False
-        word: str = match.groups()[0]
+        word: str = match.groups()[0].upper()
+        term: QueryTerm = None
 
-        if "(" in word:
-            return self.tokenize_keyword_helper("^(\\S+)\\(", query_str, tokens)
-        elif "{" in word:
-            return self.tokenize_keyword_helper("^(\\S+){", query_str, tokens)
-        elif word.upper().startswith("SEPARATOR="):  # Only keyword followed by '='
-            return self.tokenize_keyword_helper("^(\\S+)=", query_str, tokens)
+        if Tokenizer.keyword_with_valid_terminus(word):
+            term = QueryTerm.from_keyword(word[:len(word) - 1])
         else:
-            return self.tokenize_keyword_helper("^(\\S+)(\\s|$)", query_str, tokens)
+            term = QueryTerm.from_keyword(word)
+        if term is not None:
+            matched = True
+            tokens.put(Token(term))
+            remainder: str = query_str[len(term.value):].lstrip()
+            self.tokenize_helper(remainder, tokens)
+        return matched
+    
+    def keyword_with_valid_terminus(word: str) -> bool:
+        return (
+            word.endswith("(") and QueryTerm.parenable(word[:len(word) - 1])
+            or word.endswith("{") and QueryTerm.bracketable(word[:len(word) - 1])
+            or word.endswith("=") and QueryTerm.equalable(word[:len(word) - 1])
+            or re.search("\\s", word[-1])                                                
+        )
 
-    def tokenize_keyword_helper(self, pattern: str, query_str: str, tokens: LookaheadQueue) -> str:
+    def tokenize_keyword_helper(self, pattern: str, query_str: str) -> str:
         match: Match = re.search(pattern, query_str)
         if not match:
-            return False
-        keyword: str = match.groups()[0].upper()
-        qt: QueryTerm = QueryTerm.from_keyword(keyword)
-        if qt:
-            tokens.put(Token(qt))
-            remainder: str = query_str[len(keyword):].lstrip()
-            self.tokenize_helper(remainder, tokens)
-            return True
-        return False
+            return None
+        return match.groups()[0].upper()
 
     def iri_ref_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
         match: Match = re.search("(^<[a-z0-9A-Z:_\\-#%\\.\\/]+>)", query_str)
         if not match:
             raise ValueError("Invalid IRIREF")
         iri_ref: str = match.groups()[0]
-        tokens.put(Token(QueryTerm.IRIREF, iri_ref[1:len(iri_ref) - 1]))
+        tokens.put(Token(QueryTerm.IRIREF_CONTENT, iri_ref[1:len(iri_ref) - 1]))
         return query_str[len(iri_ref):].lstrip()
 
     def variable_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
@@ -151,6 +214,9 @@ class Tokenizer:
         tokens.put(Token(QueryTerm.PREFIXED_NAME_PREFIX, prefix_name[0:len(prefix_name) - 1]))
         tokens.put(Token(QueryTerm.COLON))
 
+        raise NotImplementedError("There's work to do here. A failure here should lead "
+                                  "back to self.tokenize_helper() where as a last case"
+                                  "scenario a IRIREF_CONTENT token is created")
         remainder: str = query_str[len(prefix_name):]
         first_letter: str = remainder[0]
         if first_letter == "<" or first_letter == " ":
@@ -195,9 +261,9 @@ class Tokenizer:
         return query_str[len(literal) + quote_count:].lstrip()
     
     def number_literal_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
-        match: Match = re.search("^((\\+?|-?)[0-9]+(\\.[0-9]*)?)", query_str)
+        match: Match = re.search("^([0-9]+(\\.[0-9]*)?)", query_str)
         if not match:
             raise ValueError("Invalid number literal")
         num_as_string: str = match.groups()[0]
-        tokens.put(Token(QueryTerm.NUMBER_LITERAL, num_as_string))
+        tokens.put(Token(QueryTerm.U_NUMBER_LITERAL, num_as_string))
         return query_str[len(num_as_string):].lstrip()
