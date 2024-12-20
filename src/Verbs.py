@@ -84,6 +84,7 @@ class ElementVerbPath(UnaryVerbPath):
         return f"{self.verb_path}{self.path_mod.value}"
 
 
+# Covers Iri and 'a'
 class TerminalVerbPath(VerbPath):
 
     def __init__(self, stringified_val: str):

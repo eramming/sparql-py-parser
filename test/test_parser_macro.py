@@ -121,11 +121,11 @@ def test_parser_where_clause() -> None:
     assert isinstance(elements[2], Filter)
     assert isinstance(elements[3], GraphGraphPattern)
     assert isinstance(elements[4], TriplesBlock)
-    assert [elements[1].triples_same_subj[0].subj, elements[1].triples_same_subj[1].subj] == [p1, p2]
+    assert [elements[1].unique_subj_triples[0].subj, elements[1].unique_subj_triples[1].subj] == [p1, p2]
     assert isinstance(elements[2].expr, IdentityFunction)
     assert isinstance(elements[2].expr.args[0], MultiExprExpr)
     assert elements[3].var_or_iri == my_graph
-    assert elements[4].triples_same_subj[0].subj == p3
+    assert elements[4].unique_subj_triples[0].subj == p3
 
 def test_parser_where_clause_sub_select() -> None:
     '''WHERE {
@@ -155,8 +155,8 @@ def test_parser_where_clause_sub_select() -> None:
     ggp_sub: GroupGraphPatternSub = sub_select.where_clause.ggp
     assert isinstance(ggp_sub, GroupGraphPatternSub)
     assert [len(ggp_sub.order_of_elements), len(ggp_sub.triples_blocks)] == [1, 1]
-    assert len(ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].triples_same_subj) == 1
-    assert ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].triples_same_subj[0].subj == var
+    assert len(ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].unique_subj_triples) == 1
+    assert ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].unique_subj_triples[0].subj == var
 
 def test_parser_soln_modifiers() -> None:
     '''

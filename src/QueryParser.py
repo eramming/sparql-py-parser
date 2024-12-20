@@ -175,6 +175,12 @@ class QueryParser:
             return NegationExpr(self.expression())
         elif next_tok.term is QueryTerm.STRING_LITERAL:
             return TerminalExpr(next_tok.content)
+        elif next_tok.term is QueryTerm.SUB:
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return TerminalExpr(f"-{tokens.get_now().content}")
+        elif next_tok.term is QueryTerm.ADD:
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return TerminalExpr(f"+{tokens.get_now().content}")
         elif next_tok.term is QueryTerm.U_NUMBER_LITERAL:
             return TerminalExpr(next_tok.content)
         elif next_tok.term in [QueryTerm.TRUE, QueryTerm.FALSE]:
@@ -326,7 +332,8 @@ class QueryParser:
     def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> None:
         triples_block_terms: List[QueryTerm] = [
             QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
-            QueryTerm.U_NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE, QueryTerm.FALSE]
+            QueryTerm.U_NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE,
+            QueryTerm.FALSE, QueryTerm.ADD, QueryTerm.SUB]
         not_triples_terms: List[QueryTerm] = [
             QueryTerm.OPTIONAL, QueryTerm.GRAPH, QueryTerm.SELECT, QueryTerm.MINUS,
             QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE, QueryTerm.LBRACKET]
@@ -413,7 +420,7 @@ class QueryParser:
     
     '''TriplesBlock ::= TriplesSameSubjectPath ('.' TriplesBlock?)? '''
     def triples_block(self, tokens: LookaheadQueue, triples_block: TriplesBlock) -> TriplesBlock:
-        triples_block.add_triples_same_subj(self.triples_same_subj(tokens))
+        triples_block.add_same_subj_triples(self.triples_same_subj(tokens))
         if tokens.lookahead().term is QueryTerm.PERIOD:
             tokens.get_now()
             if tokens.lookahead().term in [QueryTerm.VARIABLE, QueryTerm.IRIREF,
@@ -437,6 +444,14 @@ class QueryParser:
         elif lookahead.term is QueryTerm.STRING_LITERAL:
             tokens.get_now()
             return lookahead.content
+        elif lookahead.term is QueryTerm.SUB:
+            tokens.get_now()
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return f"-{tokens.get_now().content}"
+        elif lookahead.term is QueryTerm.ADD:
+            tokens.get_now()
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return f"+{tokens.get_now().content}"
         elif lookahead.term is QueryTerm.U_NUMBER_LITERAL:
             tokens.get_now()
             return lookahead.content

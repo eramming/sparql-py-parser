@@ -8,7 +8,7 @@ class TriplesSameSubj:
         self.subj: str = subj
         self.po_dict: Dict[Verb, Set[str]] = defaultdict(set)
 
-    def add_po_dict(self, po_dict: Dict[Verb, List[str]]) -> None:
+    def add_po_dict(self, po_dict: Dict[Verb, Set[str]]) -> None:
         self.po_dict.update(po_dict)
 
     def add_p_with_many_o(self, p: Verb, many_o: Set[str]) -> None:
