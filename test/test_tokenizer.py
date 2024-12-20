@@ -376,34 +376,6 @@ def test_tokenizer_verb_path_symbols() -> None:
     ]
     result_toks: List[Tuple[QueryTerm, str]] = [(tok.term, tok.content) for tok in tokens.get_all()]
     assert result_toks == expected
-    # assert tokens.get_now().term == QueryTerm.LPAREN
-    # has_employee: Token = tokens.get_now()
-    # assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
-    # assert tokens.get_now().term is QueryTerm.COLON
-    # legal_name: Token = tokens.get_now()
-    # assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "has_child"
-    # assert tokens.get_now().term is QueryTerm.ADD
-    # assert tokens.get_now().term is QueryTerm.PIPE
-    # has_employee: Token = tokens.get_now()
-    # assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
-    # legal_name: Token = tokens.get_now()
-    # assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "has_sibling"
-    # assert tokens.get_now().term is QueryTerm.ASTERISK
-    # assert tokens.get_now().term is QueryTerm.RPAREN
-    # assert tokens.get_now().term is QueryTerm.DIV
-    # has_employee: Token = tokens.get_now()
-    # assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
-    # assert tokens.get_now().term is QueryTerm.COLON
-    # legal_name: Token = tokens.get_now()
-    # assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "legal_name"
-    # assert tokens.get_now().term is QueryTerm.QUESTION
-    # assert tokens.get_now().term is QueryTerm.DIV
-    # assert tokens.get_now().term is QueryTerm.CARAT
-    # has_employee: Token = tokens.get_now()
-    # assert has_employee.term is QueryTerm.IRIREF and has_employee.content == "<http://ex.com/has_employee>"
-    # assert tokens.get_now().term is QueryTerm.DIV
-    # assert tokens.get_now().term is QueryTerm.EXCLAMATION
-    # assert tokens.get_now().term is QueryTerm.A
 
 def test_tokenizer_multi_expr_symbols() -> None:
     query_str: str = ''' (3 + (?var/1.2) - 1+5-5) <= 10 &&
