@@ -1,36 +1,5 @@
 from src import QueryParser, Tokenizer, Query
-import re
-from re import Match
-from typing import List, Dict
-from collections import defaultdict
-
-
-def test_strip_comments() -> None:
-    query_str: str = '''
-    prefix #foaf: <http://xmlns.com/foaf/0.1/#>
-    prefix ex: <http://bbn.com/ami/ix/ce#> # A comment
-    # Entire line comment
-    This <is> a <test#> # for <comments#>!
-    '''
-    expected: str = '''
-    prefix
-    prefix ex: <http://bbn.com/ami/ix/ce#>
-    This <is> a <test#>
-    '''
-    assert expected.lstrip("\n").rstrip(" ") == strip_comments(query_str)
-
-def test_remove_whitespace() -> None:
-    query_str: str = '''
-    Test string!      <-spaces    <-tab trailing_spaces->    
-    
-    
-    More
-        stuff
-            to
-                test.  Good  work.
-    '''
-    expected: str = "Test string! <-spaces <-tab trailing_spaces-> More stuff to test. Good work."
-    assert expected == remove_whitespace(query_str)
+from .utilities_for_test import remove_whitespace, strip_comments
 
 def test_empty() -> None:
     query_str: str = '''
@@ -41,12 +10,12 @@ def test_empty() -> None:
     '''
     
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert str(query) == remove_whitespace(strip_comments(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
 def test_select_all() -> None:
     query_str: str = '''
     prefix foaf: <http://xmlns.com/foaf/0.1/>
-    prefix ex: <http://bbn.com/ami/ix/ce#>
+    prefix ex: <http://ex.com/department/#>
 
     SELECT *
     WHERE {
@@ -56,10 +25,11 @@ def test_select_all() -> None:
     '''
     
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert str(query) == remove_whitespace(strip_comments(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
 def test_select_by_name() -> None:
     query_str: str = '''
+    base <http://ex.com/#>
     prefix foaf: <http://xmlns.com/foaf/0.1/>
 
     SELECT ?person ?fname ?age ?area
@@ -71,13 +41,13 @@ def test_select_by_name() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert str(query) == remove_whitespace(strip_comments(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
 def test_select_with_derived_vars() -> None:
     query_str: str = '''
-    prefix ex: <http://bbn.com/ami/ix/ce#>
+    prefix ex: <http://ex.com/department/#>
 
-    SELECT ?person
+    SELECT DISTINCT ?person
         (SUM(?publishedCount, ?draftCount) AS ?total_count)
     WHERE {
         ?person a ex:Author ;
@@ -86,68 +56,181 @@ def test_select_with_derived_vars() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert str(query) == remove_whitespace(strip_comments(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
-# def test_select_with_optionals() -> None:
-#     query_str: str = '''
-#     prefix foaf: <http://xmlns.com/foaf/0.1/>
-#     prefix ex: <http://bbn.com/ami/ix/ce#>
+def test_optionals() -> None:
+    query_str: str = '''
+    prefix foaf: <http://xmlns.com/foaf/0.1/>
+    prefix ex: <http://ex.com/department/#>
 
-#     SELECT *
-#     WHERE {
-#         ?person foaf:knows "Albert" ;
-#                 ex:fname ?fname .
-#         OPTIONAL {
-#             ?person ex:age ?age .
-#         }
-#     }
-#     '''
-#     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-#     assert str(query) == remove_whitespace(strip_comments(query_str))
+    SELECT *
+    WHERE {
+        ?person foaf:based_near "Pennsylvania" ;
+                ex:fname ?fname .
+        OPTIONAL {
+            ?person ex:age ?age .
+        }
+        ?person a ex:Employee .
+        OPTIONAL {
+            ?person ex:works_at ?company ;
+                    ex:has_salary ?salary .
+        }
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
-# def test_select_from_named_graph() -> None:
-#     query_str: str = '''
-#     prefix foaf: <http://xmlns.com/foaf/0.1/>
-#     prefix ex: <http://bbn.com/ami/ix/ce#>
-#     prefix abox: <http://www.bbn.com/abox/rush/decomposer#>
+def test_graph_graph_pattern() -> None:
+    query_str: str = '''
+    prefix ex: <http://ex0.com/department/#>
+    prefix pets: <http://ex1.com/rdf/pet_owners/#>
+    prefix med: <http://ex2.com/rdf/medical/animal/#>
 
-#     SELECT ?person ?fname
-#     WHERE {
-#         GRAPH abox:GraphInstance-1234 {
-#             ?person foaf:knows "Albert" ;
-#                     ex:fname ?fname .
-#         }
-#     }
-#     '''
-#     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-#     assert str(query) == remove_whitespace(strip_comments(query_str))
+    SELECT ?person ?animal ?graph
+    WHERE {
+        ?person a ex:PetOwner
+        GRAPH pets:GraphInstance-1234 {
+            ?person pets:hasPet ?pet .
+            ?pet pets:animal_type ?animal
+        }
+        GRAPH ?graph {
+            ?animal med:commonHealthIssues "hips"
+        }
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
-def strip_comments(query_str: str) -> str:
-    # query_str = query_str.lstrip("\n")
-    output: str = ""
-    for line in query_str.split('\n'):
-        comment_indxs: List[int] = [match.start() for match in re.finditer("#", line)]
-        inside_iri_lookup: Dict[int, bool] = defaultdict(bool)
-        # iriref_indxs: List[Tuple[int, int]] = \
-        for match in re.finditer("<[^<>\"{}|^`\\]\\s]*>", line):
-            update_truth_lookup(inside_iri_lookup, match)
-        line_terminus: int = len(line)
-        for indx in comment_indxs:
-            if not inside_iri_lookup[indx]:
-                line_terminus = indx
-                break
-        valid_part: str = line[:line_terminus].rstrip()
-        valid_part += "\n" if len(valid_part) != 0 else ""
-        output += valid_part
-    return output
+def test_dataset_clause() -> None:
+    query_str: str = '''
+    prefix ex: <http://ex.com/department/#>
 
-def inside_iriref(iriref_indxs: List) -> bool:
-    raise NotImplementedError()
+    SELECT ?person
+    FROM NAMED <http://ex2.com/pet_owners/Graph-1234>
+    WHERE {
+        ?person ex:has_pet "Chinchilla" .
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
 
-def update_truth_lookup(inside_iri_lookup: Dict[int, bool], match: Match) -> None:
-    for i in range(match.start(), match.end()):
-        inside_iri_lookup[i] = True
+def test_built_in_calls() -> None:
+    query_str: str = '''
+    PREFIX  dc:  <http://purl.org/dc/elements/1.1/>
+    PREFIX  ns:  <http://example.org/ns#>
 
-def remove_whitespace(input: str) -> str:
-    return re.sub("( |\n|\t)+", " ", input.strip())
-    
+    SELECT  ?lc_title ?oneliner ?max_discount
+    {
+        ?x ns:price ?p .
+        ?x ns:discount ?discount
+        ?x dc:title ?title . 
+        BIND (ROUND(?p) AS ?price)
+        BIND (ABS(?discount) AS ?pos_discount)
+        FILTER(STRLEN(?title) < 20)
+        BIND(LCASE(?title) AS ?lc_title)
+        BIND(CONCAT(?lc_title, " for ", ?price) AS ?oneliner)
+        BIND(MAX(?pos_discount) AS ?max_discount)
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+
+def test_multi_exprs() -> None:
+    query_str: str = '''
+    PREFIX  dc:  <http://purl.org/dc/elements/1.1/>
+    PREFIX  ns:  <http://example.org/ns#>
+
+    SELECT ?person ?fname
+    WHERE {
+        ?x ns:price ?p .
+        ?x ns:discount ?discount
+        BIND (ROUND(?p)*(1-ABS(?discount)) AS ?price)
+        ?x dc:title ?title .
+        FILTER (((?price/(0.9 + 0.1) != -50.0) || false) && STRLEN(?title) <= (20))
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+
+def test_subselect() -> None:
+    query_str: str = '''
+    prefix ex: <http://ex.com/department/#>
+
+    SELECT ?name_upper
+    WHERE {
+        SELECT (UCASE(?fname) AS ?name_upper)
+        WHERE {
+            ?person a ex:Person ;
+                    ex:fname ?fname .
+        }
+        LIMIT 10
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+
+def test_complex_ggp() -> None:
+    query_str: str = '''
+    prefix ex: <http://ex.com/department/#>
+
+    SELECT ?person ?age ?val ?pet_name ?obj3
+    WHERE {
+        {
+            SELECT ?person ?age
+            WHERE {
+                GRAPH ex:MyGraph {
+                    ?person a ex:Person
+                    OPTIONAL {
+                        ?person ex:age ?age
+                    }
+                    FILTER(?age < 18)
+                }
+            }
+        }
+        UNION
+        {
+            BIND(-23.1 AS ?val)
+        }
+        ?subj ex:pred ?obj
+        GRAPH ex:GraphInstance-1234 {
+            ?person ex:hasPet ?pet .
+            ?pet ex:name ?pet_name .
+        }
+        ?subj2 ex:pred2 ?obj2 ;
+                ex:pred3 ?obj3 .
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+
+def test_verb_paths() -> None:
+    query_str: str = '''
+    prefix ex: <http://ex.com/#>
+
+    SELECT ?pet_name
+    WHERE {
+        ?company ((ex:alias?/ex:hasDepartment/ex:subDept*/ex:member)|ex:owner)/ex:hasPet ?pet .
+        ?pet a ex:Chinchilla ;
+            ex:named ?pet_name .
+    }
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+
+def test_soln_modifiers() -> None:
+    query_str: str = '''
+    prefix ex: <http://ex.com/department/#>
+
+    SELECT ?person ?fname
+    WHERE {
+        ?a :x ?x ;
+           :y ?y .
+    }
+    GROUP BY ?x
+    HAVING(AVG(?y) > 0)
+    ORDER BY DESC(?x)
+    OFFSET 5
+    LIMIT 100
+    '''
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))    

@@ -14,9 +14,17 @@ class SelectClause:
 
     def set_select_all(self) -> None:
         self.is_select_all = True
+        self.derived_vars = {}
+        self.explicit_vars = set()
 
     def set_derived_var(self, var: str, expr: Expression) -> None:
         self.derived_vars[var] = expr
+        self.is_select_all = False
 
     def add_explicit_var(self, var: str) -> None:
         self.explicit_vars.add(var)
+        self.is_select_all = False
+
+    def add_explicit_vars(self, vars: Set[str]) -> None:
+        self.explicit_vars = self.explicit_vars.union(vars)
+        self.is_select_all = False
