@@ -3,7 +3,9 @@ from src import Prologue, DatasetClause, SelectClause, GraphGraphPattern, \
     MinusGraphPattern, Bind, Filter, SolnModifier, MultiExprExpr, Function, \
     AggregateFunction, IdentityFunction, ExistenceExpr, TriplesBlock, \
     TriplesSameSubj, ElementVerbPath, InverseVerbPath, IdentityVerbPath, \
-    TerminalVerbPath, MultiPathVerbPath, TerminalExpr
+    TerminalVerbPath, MultiPathVerbPath, TerminalExpr, GroupClause, HavingClause, \
+    LimitOffsetClause, OrderClause, Expression, ExprOp
+from typing import List
 from .utilities_for_test import remove_whitespace
 
 def test_prologue_to_str() -> None:
@@ -38,7 +40,38 @@ def test_dataset_clause_to_str() -> None:
     assert expected == str(dataset)
 
 def test_ggp_sub_to_str() -> None:
-    raise NotImplementedError()
+    iri = "ex:GraphInstance-1234"
+    graph_graph: GraphGraphPattern = GraphGraphPattern(iri)
+    expected: str = f"GRAPH {iri} {{ }}"
+    assert expected == remove_whitespace(str(graph_graph))
+
+    union: UnionGraphPattern = UnionGraphPattern()
+    expected: str = "{ } UNION { }"
+    assert expected == remove_whitespace(str(union))
+    
+    optional: OptionalGraphPattern = OptionalGraphPattern()
+    expected: str = "OPTIONAL { }"
+    assert expected == remove_whitespace(str(optional))
+
+    minus: MinusGraphPattern = MinusGraphPattern()
+    expected: str = "MINUS { }"
+    assert expected == remove_whitespace(str(minus))
+
+    is_silent: bool = True
+    service: ServiceGraphPattern = ServiceGraphPattern(is_silent, iri)
+    expected: str = f"SERVICE SILENT {iri} {{ }}"
+    assert expected == remove_whitespace(str(service))
+
+def test_pattern_mods() -> None:
+    t = "true"
+    filter: Filter = Filter(IdentityFunction(TerminalExpr(t)))
+    expected: str = f"FILTER ({t})"
+    assert expected == str(filter)
+
+    lc_var, uc_var = "?lc_var", "?uc_var"
+    bind: Bind = Bind(Function("UCASE", [TerminalExpr(lc_var)]), uc_var)
+    expected: str = f"BIND (UCASE({lc_var}) AS {uc_var})"
+    assert expected == str(bind)
 
 def test_triples_block_to_str() -> None:
     raise NotImplementedError()
@@ -56,4 +89,24 @@ def test_verb_path_to_str() -> None:
     raise NotImplementedError()
 
 def test_soln_modifier_to_str() -> None:
-    raise NotImplementedError()
+    limit, offset, x, y, zero, hundred = 20, 1, "?x", "?y", "0" "100"
+    soln_mod: SolnModifier = SolnModifier()
+    gc: GroupClause = GroupClause()
+    gc.add_var(x)
+    gc.add_expr(Function("ROUND", y))
+    soln_mod.set_group_clause(gc)
+    having_exprs: List[Expression] = [
+        IdentityFunction(MultiExprExpr(TerminalExpr(y), zero, ExprOp(">"))),
+        IdentityFunction(MultiExprExpr(TerminalExpr(y), hundred, ExprOp("<")))]
+    soln_mod.set_having_clause(HavingClause(having_exprs))
+    soln_mod.set_order_clause(OrderClause([Function("ASC", [TerminalExpr(x)]), TerminalExpr(y)]))
+    soln_mod.set_limit_offset_clause(LimitOffsetClause(limit, offset, False))
+    
+    expected: str = f'''
+    GROUP BY {x} ROUND({y})
+    HAVING ({y} > {zero}) ({y} < {hundred})
+    ORDER BY ASC({x}) {y}
+    OFFSET {offset}
+    LIMIT {limit}
+    '''
+    assert remove_whitespace(expected) == remove_whitespace(str(soln_mod))
