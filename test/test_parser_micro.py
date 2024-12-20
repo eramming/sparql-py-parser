@@ -9,7 +9,7 @@ def test_parser_base_decl() -> None:
     '''BASE <http://ex.com/>'''
 
     base_iri: str = "<http://ex.com/>"
-    tokens: List[Token] = [Token(qt.BASE), Token(qt.IRIREF_CONTENT, base_iri)]
+    tokens: List[Token] = [Token(qt.BASE), Token(qt.IRIREF, base_iri)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     prologue: Prologue = Prologue()
@@ -22,7 +22,7 @@ def test_parser_prefix_decl() -> None:
     foaf: str = "<http://xmlns.com/foaf/0.1/>"
     tokens: List[Token] = [
         Token(qt.PREFIX), Token(qt.PREFIXED_NAME_PREFIX, "foaf"), Token(qt.COLON),
-        Token(qt.IRIREF_CONTENT, foaf)]
+        Token(qt.IRIREF, foaf)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     prologue: Prologue = Prologue()
@@ -341,7 +341,7 @@ def test_parser_iri() -> None:
     ''' <http://ex.com/area> ex: : ex:Word :Word'''
     iriref, ex, word = "<http://ex.com/area>", "ex", "Word"
     tok_list_of_lists: List[Token] = [
-        [Token(qt.IRIREF_CONTENT, iriref)],
+        [Token(qt.IRIREF, iriref)],
         [Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON), Token(qt.EOF)],
         [Token(qt.COLON), Token(qt.EOF)],
         [Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, word)],
@@ -357,7 +357,7 @@ def test_parser_var_or_term() -> None:
     ''' <http://ex.com/area> :Word ?var "lit" true 17 false'''
     iriref, word, var, lit, num = "<http://ex.com/area>", "Word", "?var", "lit", "17"
     tok_list_of_lists: List[Token] = [
-        [Token(qt.IRIREF_CONTENT, iriref)],
+        [Token(qt.IRIREF, iriref)],
         [Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, word)],
         [Token(qt.VARIABLE, var)],
         [Token(qt.STRING_LITERAL, lit)],
@@ -406,7 +406,7 @@ def test_parser_verb_path() -> None:
     ex, food, has_gift, drink, inedible = "ex", "food", "<http://ex.com/has_gift>", "drink", "inedible"
     tokens: List[Token] = [
         Token(qt.LPAREN), Token(qt.COLON), Token(qt.PREFIXED_NAME_LOCAL, food),
-        Token(qt.PIPE), Token(qt.CARAT), Token(qt.A), Token(qt.DIV), Token(qt.IRIREF_CONTENT, has_gift),
+        Token(qt.PIPE), Token(qt.CARAT), Token(qt.A), Token(qt.DIV), Token(qt.IRIREF, has_gift),
         Token(qt.DIV), Token(qt.LPAREN), Token(qt.PREFIXED_NAME_PREFIX, ex), Token(qt.COLON),
         Token(qt.PREFIXED_NAME_LOCAL, drink), Token(qt.RPAREN), Token(qt.RPAREN),
         Token(qt.PIPE), Token(qt.CARAT), Token(qt.LPAREN), Token(qt.PREFIXED_NAME_PREFIX, ex),

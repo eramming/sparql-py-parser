@@ -69,19 +69,10 @@ class QueryParser:
     ''' BaseDecl ::= 'BASE' IRIREF '''
     def base_decl(self, tokens: LookaheadQueue, prologue: Prologue) -> None:
         assert tokens.get_now().term is QueryTerm.BASE
-        prologue.set_base(self.iriref(tokens))
-        
-    def iriref(self, tokens: LookaheadQueue) -> str:
-        assert tokens.get_now().term is QueryTerm.LT
-        iriref: str = ""
-        while tokens.lookahead().term not in [QueryTerm.EOF, QueryTerm.GT]:
-            next_tok: Token = tokens.get_now()
-            if next_tok.content is not None:
-                iriref += next_tok.content
-            else:
-                iriref += next_tok.term.value
-        assert tokens.get_now().term is QueryTerm.GT
-        return iriref
+        iri_ref: Token = tokens.get_now()
+        if iri_ref.term is not QueryTerm.IRIREF:
+            self.throw_error([QueryTerm.IRIREF], iri_ref)
+        prologue.set_base(iri_ref.content)
 
     ''' PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF '''
     def prefix_decl(self, tokens: LookaheadQueue, prologue: Prologue) -> None:
@@ -95,7 +86,9 @@ class QueryParser:
             del expected[0]
             next_tok = tokens.get_now()
         if next_tok.term is QueryTerm.COLON:
-            prologue.set_prefix(prefix, self.iriref(tokens))
+            iriref: Token = tokens.get_now()
+            assert iriref.term is QueryTerm.IRIREF
+            prologue.set_prefix(prefix, iriref.content)
         else:
             self.throw_error([QueryTerm.COLON], next_tok)
 
@@ -284,10 +277,10 @@ class QueryParser:
         
     '''Iri ::= IRIREF | PN_PREFIX? ':' | PN_PREFIX? ':' PN_LOCAL '''
     def iri(self, tokens: LookaheadQueue) -> str:
-        expected: List[QueryTerm] = [QueryTerm.LT, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        expected: List[QueryTerm] = [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
         lookahead: Token = tokens.lookahead()
-        if lookahead.term is QueryTerm.LT:
-            return self.iriref(tokens)
+        if lookahead.term is QueryTerm.IRIREF:
+            return tokens.get_now().content
         prefix, local_name = "", ""
         if lookahead.term is QueryTerm.PREFIXED_NAME_PREFIX:
             prefix = tokens.get_now().content
@@ -332,7 +325,7 @@ class QueryParser:
     '''GroupGraphPatternSub ::= TriplesBlock? (GraphPatternNotTriples '.'? TriplesBlock?)* '''
     def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> None:
         triples_block_terms: List[QueryTerm] = [
-            QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.LT,
+            QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
             QueryTerm.U_NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE, QueryTerm.FALSE]
         not_triples_terms: List[QueryTerm] = [
             QueryTerm.OPTIONAL, QueryTerm.GRAPH, QueryTerm.SELECT, QueryTerm.MINUS,
@@ -423,7 +416,7 @@ class QueryParser:
         triples_block.add_triples_same_subj(self.triples_same_subj(tokens))
         if tokens.lookahead().term is QueryTerm.PERIOD:
             tokens.get_now()
-            if tokens.lookahead().term in [QueryTerm.VARIABLE, QueryTerm.LT,
+            if tokens.lookahead().term in [QueryTerm.VARIABLE, QueryTerm.IRIREF,
                                            QueryTerm.STRING_LITERAL, QueryTerm.U_NUMBER_LITERAL,
                                            QueryTerm.TRUE, QueryTerm.FALSE, QueryTerm.PREFIXED_NAME_PREFIX]:
                 self.triples_block(tokens, triples_block)
@@ -453,11 +446,11 @@ class QueryParser:
         elif lookahead.term is QueryTerm.FALSE:
             tokens.get_now()
             return "false"
-        elif lookahead.term in [QueryTerm.LT, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]:
+        elif lookahead.term in [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]:
             return self.iri(tokens)
         else:
             self.throw_error([QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.TRUE, QueryTerm.FALSE,
-                              QueryTerm.VARIABLE, QueryTerm.LT, QueryTerm.STRING_LITERAL,
+                              QueryTerm.VARIABLE, QueryTerm.IRIREF, QueryTerm.STRING_LITERAL,
                               QueryTerm.U_NUMBER_LITERAL], lookahead)
 
     '''PropertyListPathNotEmpty ::= ( VerbPath | Var ) ObjectList
@@ -468,7 +461,7 @@ class QueryParser:
         pred_to_objs[verb] = objs
 
         verb_starters: List[QueryTerm] = [
-            QueryTerm.VARIABLE, QueryTerm.LPAREN, QueryTerm.A, QueryTerm.LT,
+            QueryTerm.VARIABLE, QueryTerm.LPAREN, QueryTerm.A, QueryTerm.IRIREF,
             QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
         while tokens.lookahead().term is QueryTerm.SEMI_COLON:
             tokens.get_now()
@@ -480,7 +473,7 @@ class QueryParser:
     
     def property_list_path_not_empty_helper(self, tokens: LookaheadQueue) -> Tuple[Verb, Set[str]]:
         verb_path_starters: List[QueryTerm] = [
-            QueryTerm.LPAREN, QueryTerm.A, QueryTerm.LT, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+            QueryTerm.LPAREN, QueryTerm.A, QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
         verb: Verb = None
         if tokens.lookahead().term is QueryTerm.VARIABLE:
             verb = VarVerb(tokens.get_now().content)
@@ -493,7 +486,7 @@ class QueryParser:
         
     '''VerbPath ::= iri | 'a' | '(' VerbPath ')' '''
     def verb_path(self, tokens: LookaheadQueue) -> VerbPath:
-        iri_terms: List[QueryTerm] = [QueryTerm.LT, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
+        iri_terms: List[QueryTerm] = [QueryTerm.IRIREF, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.COLON]
         vp: VerbPath = None
 
         is_inverse: bool = False

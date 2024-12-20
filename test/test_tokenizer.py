@@ -1,6 +1,6 @@
 from src.tokens import Tokenizer, Token, QueryTerm
 from src.LookaheadQueue import LookaheadQueue
-from typing import List
+from typing import List, Tuple
 
 def test_tokenizer_prologue() -> None:
     query_str: str = '''
@@ -15,8 +15,8 @@ def test_tokenizer_prologue() -> None:
     assert prefix_name.content == "xsd"
     assert tokens.get_now().term == QueryTerm.COLON
     iriref: Token = tokens.get_now()
-    assert iriref.term == QueryTerm.IRIREF_CONTENT
-    assert iriref.content == "http://www.w3.org/2001/XMLSchema#"
+    assert iriref.term == QueryTerm.IRIREF
+    assert iriref.content == "<http://www.w3.org/2001/XMLSchema#>"
 
     assert tokens.get_now().term == QueryTerm.PREFIX
     prefix_name: Token = tokens.get_now()
@@ -24,8 +24,8 @@ def test_tokenizer_prologue() -> None:
     assert prefix_name.content == "rdf"
     assert tokens.get_now().term == QueryTerm.COLON
     iriref: Token = tokens.get_now()
-    assert iriref.term == QueryTerm.IRIREF_CONTENT
-    assert iriref.content == "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    assert iriref.term == QueryTerm.IRIREF
+    assert iriref.content == "<http://www.w3.org/1999/02/22-rdf-syntax-ns#>"
     assert tokens.get_now().term == QueryTerm.EOF
 
 def test_tokenizer_prologue_with_base() -> None:
@@ -38,12 +38,12 @@ def test_tokenizer_prologue_with_base() -> None:
 
     assert tokens.get_now().term == QueryTerm.BASE
     iriref1: Token = tokens.get_now()
-    assert iriref1.term == QueryTerm.IRIREF_CONTENT
-    assert iriref1.content == "http://example1-company.org/"
+    assert iriref1.term == QueryTerm.IRIREF
+    assert iriref1.content == "<http://example1-company.org/>"
     assert tokens.get_now().term == QueryTerm.BASE
     iriref2: Token = tokens.get_now()
-    assert iriref2.term == QueryTerm.IRIREF_CONTENT
-    assert iriref2.content == "http://example2-company.org/"
+    assert iriref2.term == QueryTerm.IRIREF
+    assert iriref2.content == "<http://example2-company.org/>"
     assert tokens.get_now().term == QueryTerm.EOF
 
 def test_tokenizer_unusual_iriref() -> None:
@@ -56,27 +56,9 @@ def test_tokenizer_unusual_iriref() -> None:
     prefix: Token = tokens.get_now()
     assert prefix.term == QueryTerm.PREFIXED_NAME_PREFIX and prefix.content == "xsd"
     assert tokens.get_now().term == QueryTerm.COLON
-    assert tokens.get_now().term == QueryTerm.LT
-    assert tokens.get_now().term == QueryTerm.UCASE
-    assert tokens.get_now().term == QueryTerm.LPAREN
-    var: Token = tokens.get_now()
-    assert var.term == QueryTerm.VARIABLE and var.content == "?var"
-    assert tokens.get_now().term == QueryTerm.RPAREN
-    assert tokens.get_now().term == QueryTerm.U_NUMBER_LITERAL
-    assert tokens.get_now().term == QueryTerm.ADD
-    assert tokens.get_now().term == QueryTerm.U_NUMBER_LITERAL
-    assert tokens.get_now().term == QueryTerm.MINUS
-    assert tokens.get_now().term == QueryTerm.U_NUMBER_LITERAL
-    assert tokens.get_now().term == QueryTerm.DIV
-    assert tokens.get_now().term == QueryTerm.U_NUMBER_LITERAL
-    iriref_content: Token = tokens.get_now()
-    assert iriref_content.term == QueryTerm.IRIREF_CONTENT and iriref_content.content == "#"
-    assert tokens.get_now().term == QueryTerm.GT
-    assert tokens.get_now().term == QueryTerm.EOF
-    
     iriref: Token = tokens.get_now()
-    assert iriref.term == QueryTerm.IRIREF_CONTENT
-    assert iriref.content == "http://www.w3.org/2001/XMLSchema#"
+    assert iriref.term == QueryTerm.IRIREF and iriref.content == "<UCASE(?var)7+8-10/1#>"
+    assert tokens.get_now().term is QueryTerm.EOF
 
 def test_tokenizer_select_variables() -> None:
     query_str: str = "SELECT ?first_name ?_AGE ?4th_grade_teacher"
@@ -319,7 +301,7 @@ def test_tokenizer_string_literal() -> None:
 def test_tokenizer_expected_failures() -> None:
     queries: List[str] = ["EOF", "PREFIXED_NAME_PREFIX", "PREFIXED_NAME_LOCAL",
                           "IRIREF", "VARIABLE", "NUMBER_LITERAL", "STRING_LITERAL",
-                          "WHERE=", "WHERE(" "a(", "a{"]
+                          "WHERE=", "WHERE(" "a(", "a{", "<http:// ex.com/#>"]
     
     for query_str in queries:
         tokenizer: Tokenizer = Tokenizer()
@@ -387,39 +369,51 @@ def test_tokenizer_verb_path_symbols() -> None:
 
     tokenizer: Tokenizer = Tokenizer()
     tokens: LookaheadQueue = tokenizer.tokenize(query_str)
-
-    assert tokens.get_now().term == QueryTerm.LPAREN
-    has_employee: Token = tokens.get_now()
-    assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
-    assert tokens.get_now().term is QueryTerm.COLON
-    legal_name: Token = tokens.get_now()
-    assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "has_child"
-    assert tokens.get_now().term is QueryTerm.ADD
-    assert tokens.get_now().term is QueryTerm.PIPE
-    has_employee: Token = tokens.get_now()
-    assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
-    legal_name: Token = tokens.get_now()
-    assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "has_sibling"
-    assert tokens.get_now().term is QueryTerm.ASTERISK
-    assert tokens.get_now().term is QueryTerm.RPAREN
-    assert tokens.get_now().term is QueryTerm.DIV
-    has_employee: Token = tokens.get_now()
-    assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
-    assert tokens.get_now().term is QueryTerm.COLON
-    legal_name: Token = tokens.get_now()
-    assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "legal_name"
-    assert tokens.get_now().term is QueryTerm.QUESTION
-    assert tokens.get_now().term is QueryTerm.DIV
-    assert tokens.get_now().term is QueryTerm.CARAT
-    has_employee: Token = tokens.get_now()
-    assert has_employee.term is QueryTerm.IRIREF_CONTENT and has_employee.content == "<http://ex.com/has_employee>"
-    assert tokens.get_now().term is QueryTerm.DIV
-    assert tokens.get_now().term is QueryTerm.EXCLAMATION
-    assert tokens.get_now().term is QueryTerm.A
+    expected: List[Tuple[QueryTerm, str]] = [
+        (QueryTerm.LPAREN, None), (QueryTerm.PREFIXED_NAME_PREFIX, "ex"),
+        (QueryTerm.COLON, None), (QueryTerm.PREFIXED_NAME_LOCAL, "has_child"),
+        (QueryTerm.ADD, None), (QueryTerm.PIPE, None), (QueryTerm.PREFIXED_NAME_PREFIX, "ex"),
+        (QueryTerm.COLON, None), (QueryTerm.PREFIXED_NAME_LOCAL, "has_sibling"),
+        (QueryTerm.ASTERISK, None), (QueryTerm.RPAREN, None), (QueryTerm.DIV, None),
+        (QueryTerm.PREFIXED_NAME_PREFIX, "ex"), (QueryTerm.COLON, None),
+        (QueryTerm.PREFIXED_NAME_LOCAL, "legal_name"), (QueryTerm.QUESTION, None),
+        (QueryTerm.DIV, None), (QueryTerm.CARAT, None), (QueryTerm.IRIREF, "<http://ex.com/has_employee>"),
+        (QueryTerm.DIV, None), (QueryTerm.EXCLAMATION, None), (QueryTerm.A, None), (QueryTerm.EOF, None)
+    ]
+    result_toks: List[Tuple[QueryTerm, str]] = [(tok.term, tok.content) for tok in tokens.get_all()]
+    assert result_toks == expected
+    # assert tokens.get_now().term == QueryTerm.LPAREN
+    # has_employee: Token = tokens.get_now()
+    # assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
+    # assert tokens.get_now().term is QueryTerm.COLON
+    # legal_name: Token = tokens.get_now()
+    # assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "has_child"
+    # assert tokens.get_now().term is QueryTerm.ADD
+    # assert tokens.get_now().term is QueryTerm.PIPE
+    # has_employee: Token = tokens.get_now()
+    # assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
+    # legal_name: Token = tokens.get_now()
+    # assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "has_sibling"
+    # assert tokens.get_now().term is QueryTerm.ASTERISK
+    # assert tokens.get_now().term is QueryTerm.RPAREN
+    # assert tokens.get_now().term is QueryTerm.DIV
+    # has_employee: Token = tokens.get_now()
+    # assert has_employee.term is QueryTerm.PREFIXED_NAME_PREFIX and has_employee.content == "ex"
+    # assert tokens.get_now().term is QueryTerm.COLON
+    # legal_name: Token = tokens.get_now()
+    # assert legal_name.term is QueryTerm.PREFIXED_NAME_LOCAL and legal_name.content == "legal_name"
+    # assert tokens.get_now().term is QueryTerm.QUESTION
+    # assert tokens.get_now().term is QueryTerm.DIV
+    # assert tokens.get_now().term is QueryTerm.CARAT
+    # has_employee: Token = tokens.get_now()
+    # assert has_employee.term is QueryTerm.IRIREF and has_employee.content == "<http://ex.com/has_employee>"
+    # assert tokens.get_now().term is QueryTerm.DIV
+    # assert tokens.get_now().term is QueryTerm.EXCLAMATION
+    # assert tokens.get_now().term is QueryTerm.A
 
 def test_tokenizer_multi_expr_symbols() -> None:
     query_str: str = ''' (3 + (?var/1.2) - 1+5-5) <= 10 &&
-                        1<2||?var>= 100&&?var!=144 '''
+                        1< 2||?var>= 100&&?var!=144 '''
 
     tokenizer: Tokenizer = Tokenizer()
     tokens: LookaheadQueue = tokenizer.tokenize(query_str)
@@ -434,7 +428,7 @@ def test_tokenizer_multi_expr_symbols() -> None:
         QueryTerm.U_NUMBER_LITERAL, QueryTerm.LT, QueryTerm.U_NUMBER_LITERAL,
         QueryTerm.LOGICAL_OR, QueryTerm.VARIABLE, QueryTerm.G_OR_EQ,
         QueryTerm.U_NUMBER_LITERAL, QueryTerm.LOGICAL_AND, QueryTerm.VARIABLE,
-        QueryTerm.NOT_EQ, QueryTerm.U_NUMBER_LITERAL
+        QueryTerm.NOT_EQ, QueryTerm.U_NUMBER_LITERAL, QueryTerm.EOF
     ]
     assert expected == [token.term for token in tokens.get_all()]
 
@@ -457,8 +451,8 @@ def test_tokenizer_full_query() -> None:
     assert prefix.term == QueryTerm.PREFIXED_NAME_PREFIX and prefix.content == "foaf"
     assert tokens.get_now().term == QueryTerm.COLON
     iriref: Token = tokens.get_now()
-    assert iriref.term == QueryTerm.IRIREF_CONTENT
-    assert iriref.content == "http://xmlns.com/foaf/0.1/"
+    assert iriref.term == QueryTerm.IRIREF
+    assert iriref.content == "<http://xmlns.com/foaf/0.1/>"
 
     assert tokens.get_now().term is QueryTerm.SELECT
     assert tokens.get_now().term is QueryTerm.ASTERISK

@@ -97,13 +97,17 @@ class Tokenizer:
             tokens.put(Token(QueryTerm.PIPE))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
+        elif first_letter == "^":
+            tokens.put(Token(QueryTerm.CARAT))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
         elif first_letter == "<":
             remainder: str = None
-            pattern: str = "^<([^<>\"{}|^`\\]-[#x00-#x20])*>"
-            if :
+            if re.search("^(<[^<>\"{}|^`\\]\\s]*>)", query_str):
                 remainder = self.iri_ref_tokenizer(query_str, tokens)
             else:
-                remainder = a;ksdlfja
+                tokens.put(Token(QueryTerm.LT))
+                remainder = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "?":
             remainder: str = None
@@ -141,9 +145,6 @@ class Tokenizer:
             remainder: str = self.string_literal_tokenizer(query_str, tokens)
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "#":
-            raise NotImplementedError("Add logic to check if a '>' is on this line to "
-                                      "close an iriref. Maybe have a global variable "
-                                      "flag that tells us if we've seen a '<' on this line.")
             indx: int = re.search("(\r\n|\n)", query_str).end()
             if indx == -1:
                 tokens.put(Token(QueryTerm.EOF))
@@ -183,18 +184,12 @@ class Tokenizer:
             or re.search("\\s", word[-1])                                                
         )
 
-    def tokenize_keyword_helper(self, pattern: str, query_str: str) -> str:
-        match: Match = re.search(pattern, query_str)
-        if not match:
-            return None
-        return match.groups()[0].upper()
-
     def iri_ref_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
-        match: Match = re.search("(^<[a-z0-9A-Z:_\\-#%\\.\\/]+>)", query_str)
+        match: Match = re.search("^(<[^<>\"{}|^`\\]\\s]*>)", query_str)
         if not match:
             raise ValueError("Invalid IRIREF")
         iri_ref: str = match.groups()[0]
-        tokens.put(Token(QueryTerm.IRIREF_CONTENT, iri_ref[1:len(iri_ref) - 1]))
+        tokens.put(Token(QueryTerm.IRIREF, iri_ref))
         return query_str[len(iri_ref):].lstrip()
 
     def variable_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
@@ -214,9 +209,6 @@ class Tokenizer:
         tokens.put(Token(QueryTerm.PREFIXED_NAME_PREFIX, prefix_name[0:len(prefix_name) - 1]))
         tokens.put(Token(QueryTerm.COLON))
 
-        raise NotImplementedError("There's work to do here. A failure here should lead "
-                                  "back to self.tokenize_helper() where as a last case"
-                                  "scenario a IRIREF_CONTENT token is created")
         remainder: str = query_str[len(prefix_name):]
         first_letter: str = remainder[0]
         if first_letter == "<" or first_letter == " ":

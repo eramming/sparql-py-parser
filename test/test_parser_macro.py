@@ -16,11 +16,11 @@ def test_parser_prologue() -> None:
     foaf: str = "http://xmlns.com/foaf/0.1/"
     rdf: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     tokens: List[Token] = [
-        Token(qt.BASE), Token(qt.IRIREF_CONTENT, base_iri), Token(qt.PREFIX),
+        Token(qt.BASE), Token(qt.IRIREF, base_iri), Token(qt.PREFIX),
         Token(qt.PREFIXED_NAME_PREFIX, "foaf"), Token(qt.COLON),
-        Token(qt.IRIREF_CONTENT, foaf), Token(qt.PREFIX),
+        Token(qt.IRIREF, foaf), Token(qt.PREFIX),
         Token(qt.PREFIXED_NAME_PREFIX, "rdf"), Token(qt.COLON),
-        Token(qt.IRIREF_CONTENT, rdf)]
+        Token(qt.IRIREF, rdf)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     for token in (tokens + SIMPLE_SELECT + SIMPLE_WHERE):
         tok_queue.put(token)
