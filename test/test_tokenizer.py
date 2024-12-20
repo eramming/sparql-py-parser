@@ -332,12 +332,6 @@ def test_tokenizer_path_primaries() -> None:
     assert local_name.content == "Place"
     assert tokens.get_now().term is QueryTerm.EOF
 
-    query_str: str = '''
-        ?entity a() ex:Place
-    '''
-    tokenizer: Tokenizer = Tokenizer()
-    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
-
 def test_tokenizer_boolean_literals() -> None:
     query_str: str = ''' TRUE FALSE '''
 
