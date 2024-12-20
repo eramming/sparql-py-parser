@@ -116,7 +116,7 @@ def test_parser_built_in_call_substr() -> None:
     word1, word2, start1, start2, length = "HiddenHi!", "HidHi!den", "7", "4", "3"
     tokens: List[Token] = [
         Token(qt.SUBSTR), Token(qt.LPAREN), Token(qt.STRING_LITERAL, word1), Token(qt.COMMA),
-        Token(qt.NUMBER_LITERAL, start1), Token(qt.RPAREN)]
+        Token(qt.U_NUMBER_LITERAL, start1), Token(qt.RPAREN)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     built_in_term: qt = tok_queue.get_now().term
@@ -126,8 +126,8 @@ def test_parser_built_in_call_substr() -> None:
     assert [v.stringified_val for v in func.args] == [word1, start1]
 
     tokens = [Token(qt.SUBSTR), Token(qt.LPAREN), Token(qt.STRING_LITERAL, word2),
-              Token(qt.COMMA), Token(qt.NUMBER_LITERAL, start2), Token(qt.COMMA),
-              Token(qt.NUMBER_LITERAL, length), Token(qt.RPAREN)]
+              Token(qt.COMMA), Token(qt.U_NUMBER_LITERAL, start2), Token(qt.COMMA),
+              Token(qt.U_NUMBER_LITERAL, length), Token(qt.RPAREN)]
     tok_queue = LookaheadQueue()
     tok_queue.put_all(tokens)
     built_in_term: qt = tok_queue.get_now().term
@@ -362,7 +362,7 @@ def test_parser_var_or_term() -> None:
         [Token(qt.VARIABLE, var)],
         [Token(qt.STRING_LITERAL, lit)],
         [Token(qt.TRUE)],
-        [Token(qt.NUMBER_LITERAL, num)],
+        [Token(qt.U_NUMBER_LITERAL, num)],
         [Token(qt.FALSE)]]
     expected: List[str] = [iriref, f":{word}", var, lit, "true", num, "false"]
     for tokens, expected_iri in zip(tok_list_of_lists, expected):
@@ -490,8 +490,8 @@ def test_parser_limit_offset_condition() -> None:
     ''' LIMIT 100 OFFSET 10'''
     limit_val, offset_val = "100", "10"
     tokens: List[Token] = [
-        Token(qt.LIMIT), Token(qt.NUMBER_LITERAL, limit_val), Token(qt.OFFSET),
-        Token(qt.NUMBER_LITERAL, offset_val), Token(qt.EOF)]
+        Token(qt.LIMIT), Token(qt.U_NUMBER_LITERAL, limit_val), Token(qt.OFFSET),
+        Token(qt.U_NUMBER_LITERAL, offset_val), Token(qt.EOF)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
@@ -503,8 +503,8 @@ def test_parser_limit_offset_condition() -> None:
     ''' OFFSET 10 LIMIT 100'''
     limit_val, offset_val = "100", "10"
     tokens: List[Token] = [
-        Token(qt.OFFSET), Token(qt.NUMBER_LITERAL, offset_val), Token(qt.LIMIT),
-        Token(qt.NUMBER_LITERAL, limit_val), Token(qt.EOF)]
+        Token(qt.OFFSET), Token(qt.U_NUMBER_LITERAL, offset_val), Token(qt.LIMIT),
+        Token(qt.U_NUMBER_LITERAL, limit_val), Token(qt.EOF)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
@@ -516,7 +516,7 @@ def test_parser_limit_offset_condition() -> None:
     ''' LIMIT 100'''
     limit_val = "100"
     tokens: List[Token] = [
-        Token(qt.LIMIT), Token(qt.NUMBER_LITERAL, limit_val), Token(qt.EOF)]
+        Token(qt.LIMIT), Token(qt.U_NUMBER_LITERAL, limit_val), Token(qt.EOF)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
@@ -528,7 +528,7 @@ def test_parser_limit_offset_condition() -> None:
     ''' OFFSET 10'''
     offset_val = "10"
     tokens: List[Token] = [
-        Token(qt.OFFSET), Token(qt.NUMBER_LITERAL, offset_val), Token(qt.EOF)]
+        Token(qt.OFFSET), Token(qt.U_NUMBER_LITERAL, offset_val), Token(qt.EOF)]
     tok_queue: LookaheadQueue = LookaheadQueue()
     tok_queue.put_all(tokens)
     s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)

@@ -85,6 +85,13 @@ this parsing library. Features left out include:
 * `ValuesClause`
 * `PathNegatedPropertySet`
 * `TriplesNodePath`
+* `Update`
+* Conflation of iriref with '<' or '<='
+  - It seems to me an inherent flaw with the sparql grammar. Seems like a double angle bracket ('<<' and '>>') should be used for irirefs. This parser will first attempt to make an iriref, and if not, will turn a '<' or '<=' less than and less than or equal respectively.
+  - If you see an iriref created where you don't intend, simply add a whitespace within
+  - E.g., which is 7<8&&8>7
+    * U_NUMBER_LITERAL, IRIREF, then U_NUMBER_LITERAL (what this library will do)
+    * U_NUMBER_LITERAL, LT, U_NUMBER_LITERAL, LOGICAL_AND, U_NUMBER_LITERAL, GT, U_NUMBER_LITERAL
 
 
 
