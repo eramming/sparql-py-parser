@@ -109,6 +109,10 @@ class Tokenizer:
                 tokens.put(Token(QueryTerm.LT))
                 remainder = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
+        elif first_letter == ">":
+            tokens.put(Token(QueryTerm.GT))
+            remainder: str = query_str[1:].lstrip()
+            self.tokenize_helper(remainder, tokens)
         elif first_letter == "?":
             remainder: str = None
             if re.search("[a-z0-9A-Z_]", query_str[1]): 
@@ -165,8 +169,9 @@ class Tokenizer:
         word: str = match.groups()[0].upper()
         term: QueryTerm = None
 
-        if Tokenizer.keyword_with_valid_terminus(word):
-            term = QueryTerm.from_keyword(word[:len(word) - 1])
+        if Tokenizer.keyword_has_terminus(word):
+            if Tokenizer.keyword_has_valid_terminus(word):
+                term = QueryTerm.from_keyword(word[:len(word) - 1])
         else:
             term = QueryTerm.from_keyword(word)
         if term is not None:
@@ -176,13 +181,16 @@ class Tokenizer:
             self.tokenize_helper(remainder, tokens)
         return matched
     
-    def keyword_with_valid_terminus(word: str) -> bool:
+    def keyword_has_valid_terminus(word: str) -> bool:
         return (
             word.endswith("(") and QueryTerm.parenable(word[:len(word) - 1])
             or word.endswith("{") and QueryTerm.bracketable(word[:len(word) - 1])
             or word.endswith("=") and QueryTerm.equalable(word[:len(word) - 1])
             or re.search("\\s", word[-1])                                                
         )
+    
+    def keyword_has_terminus(word: str) -> bool:
+        return True if re.search("\\(|{|=|\\s", word[-1]) else False
 
     def iri_ref_tokenizer(self, query_str: str, tokens: LookaheadQueue) -> str:
         match: Match = re.search("^(<[^<>\"{}|^`\\]\\s]*>)", query_str)
