@@ -63,7 +63,8 @@ class GroupClause:
         all_elements: Dict[str, Any] = self.expressions | self.derived_vars | self.vars
         return [str(all_elements[uuid]) for uuid in self.order_of_elements]
     
-    def in_order_derived_vars
+    def in_order_exprs(self) -> List[Expression]:
+        return [self.expressions[uuid] for uuid in self.order_of_elements if uuid in self.expressions]
 
     def __str__(self):
         if self.is_empty():

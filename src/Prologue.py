@@ -25,7 +25,7 @@ class Prologue:
         self.prefixes = {}
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         base: str = ""

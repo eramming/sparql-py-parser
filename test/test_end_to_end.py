@@ -14,8 +14,8 @@ def test_empty() -> None:
 
 def test_select_all() -> None:
     query_str: str = '''
-    prefix foaf: <http://xmlns.com/foaf/0.1/>
-    prefix ex: <http://ex.com/department/#>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX ex: <http://ex.com/department/#>
 
     SELECT *
     WHERE {

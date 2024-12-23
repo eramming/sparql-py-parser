@@ -48,6 +48,7 @@ class QueryParser:
         
         next_tok: Token = tokens.get_now()
         if next_tok.term is QueryTerm.EOF:
+            prologue = Prologue() if prologue is None else prologue
             return Query(prologue, select_query)
         else:
             self.throw_error([QueryTerm.EOF], next_tok)
@@ -443,7 +444,7 @@ class QueryParser:
             return lookahead.content
         elif lookahead.term is QueryTerm.STRING_LITERAL:
             tokens.get_now()
-            return lookahead.content
+            return f"\"{lookahead.content}\""
         elif lookahead.term is QueryTerm.SUB:
             tokens.get_now()
             assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
