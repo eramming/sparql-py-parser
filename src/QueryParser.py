@@ -155,7 +155,7 @@ class QueryParser:
         multi_expr_terms: List[QueryTerm] = [
             QueryTerm.ASTERISK, QueryTerm.EQUALS, QueryTerm.DIV, QueryTerm.ADD,
             QueryTerm.SUB, QueryTerm.LOGICAL_AND, QueryTerm.LT, QueryTerm.GT, QueryTerm.G_OR_EQ,
-            QueryTerm.L_OR_EQ, QueryTerm.NOT_EQ, QueryTerm.EXCLAMATION]
+            QueryTerm.L_OR_EQ, QueryTerm.NOT_EQ, QueryTerm.EXCLAMATION, QueryTerm.LOGICAL_OR]
         expr: Expression = self.expression_helper(tokens)
         if tokens.lookahead().term in multi_expr_terms:
             expr_op: ExprOp = ExprOp(tokens.get_now().term.value)

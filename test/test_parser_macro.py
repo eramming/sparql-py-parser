@@ -49,7 +49,7 @@ def test_parser_select_clause() -> None:
         tok_queue.put(token)
     query: Query = QueryParser().parse(tok_queue)
     select_clause: SelectClause = query.select_query.select_clause
-    assert query.prologue is None
+    assert query.prologue.base_iri is None and len(query.prologue.prefixes) == 0
     assert select_clause.explicit_vars == set([fname, age, lname])
     assert select_clause.is_distinct
     assert not select_clause.is_select_all

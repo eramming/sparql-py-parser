@@ -144,7 +144,7 @@ def test_multi_exprs() -> None:
     WHERE {
         ?x ns:price ?p .
         ?x ns:discount ?discount .
-        BIND(ROUND(?p)*(1-ABS(?discount)) AS ?price)
+        BIND(ROUND(?p) * (1 - ABS(?discount)) AS ?price)
         ?x dc:title ?title .
         FILTER (((?price / (0.9 + 0.1) != -50.0) || false) && STRLEN(?title) <= (20))
     }
@@ -227,7 +227,7 @@ def test_soln_modifiers() -> None:
            :y ?y .
     }
     GROUP BY ?x
-    HAVING(AVG(?y) > 0)
+    HAVING (AVG(?y) > 0)
     ORDER BY DESC(?x)
     OFFSET 5
     LIMIT 100

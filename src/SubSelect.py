@@ -24,5 +24,4 @@ class SubSelect(GroupGraphPattern):
         return self.__str__()
     
     def __str__(self):
-
-        return f"{{\n\t{self.select_clause}{self.where_clause}{self.soln_modifier}\n}}\n"
+        return f"{self.select_clause}{self.where_clause}{self.soln_modifier}"

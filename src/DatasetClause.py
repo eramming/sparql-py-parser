@@ -7,7 +7,7 @@ class DatasetClause:
         self.is_named: bool = is_named
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         named: str = "NAMED " if self.is_named else ""

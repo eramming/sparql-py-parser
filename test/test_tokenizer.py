@@ -46,6 +46,44 @@ def test_tokenizer_prologue_with_base() -> None:
     assert iriref2.content == "<http://example2-company.org/>"
     assert tokens.get_now().term == QueryTerm.EOF
 
+def test_tokenizer_prefixed_names() -> None:
+    query_str: str = '''
+        ex: : :pred ex:pred
+        '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_PREFIX
+    assert tokens.get_now().term is QueryTerm.COLON
+    assert tokens.get_now().term is QueryTerm.COLON
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_LOCAL
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_PREFIX
+    assert tokens.get_now().term is QueryTerm.COLON
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_LOCAL
+    assert tokens.get_now().term == QueryTerm.EOF
+
+def test_tokenizer_boolean_literals() -> None:
+    query_str: str = '''
+        (true) TrUe=FALSE trUe&&TRUE false||true FALSE
+        '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get_now().term is QueryTerm.LPAREN
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.RPAREN
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.EQUALS
+    assert tokens.get_now().term is QueryTerm.FALSE
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.LOGICAL_AND
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.FALSE
+    assert tokens.get_now().term is QueryTerm.LOGICAL_OR
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.FALSE
+    assert tokens.get_now().term == QueryTerm.EOF
+
 def test_tokenizer_unusual_iriref() -> None:
     query_str: str = '''
         PREFIX xsd: <UCASE(?var)7+8-10/1#> '''
@@ -331,14 +369,6 @@ def test_tokenizer_path_primaries() -> None:
     assert local_name.term == QueryTerm.PREFIXED_NAME_LOCAL
     assert local_name.content == "Place"
     assert tokens.get_now().term is QueryTerm.EOF
-
-def test_tokenizer_boolean_literals() -> None:
-    query_str: str = ''' TRUE FALSE '''
-
-    tokenizer: Tokenizer = Tokenizer()
-    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
-    assert tokens.get_now().term is QueryTerm.TRUE
-    assert tokens.get_now().term is QueryTerm.FALSE
     
 def test_tokenizer_ggp_terms() -> None:
     query_str: str = '''
