@@ -42,8 +42,10 @@ class GroupGraphPatternSub:
         return [all_elements[uuid] for uuid in self.order_of_elements]
 
     def __str__(self):
-        ggp_interior: str = "\n".join(self.elements_in_order())
-        return f"{{ {ggp_interior} }}"
+        ggp_interior: str = "\n\t".join([str(ele) for ele in self.elements_in_order()])
+        if ggp_interior == "":
+            return "{ }"
+        return f"{{\n\t{ggp_interior}\n}}"
     
     def __format__(self, format_spec):
         return self.__str__()
@@ -86,7 +88,7 @@ class UnionGraphPattern(GroupGraphPatternSub):
         raise ValueError("Can't set PatternModifier in a UnionGraphPattern!")
 
     def __str__(self):
-        return "UNION ".join(self.patterns)
+        return " UNION ".join([str(ele) for ele in self.elements_in_order()])
     
     def __format__(self, format_spec):
         return self.__str__()

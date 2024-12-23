@@ -186,11 +186,10 @@ def test_parser_soln_modifiers() -> None:
     s_mod: SolnModifier = QueryParser().parse(tok_queue).select_query.soln_modifier
     gc: GroupClause = s_mod.group_clause
     assert [len(gc.expressions), len(gc.derived_vars), len(gc.vars)] == [1, 1, 2]
-    assert isinstance(gc.expressions[0], Function) and gc.expressions[0].func_name == "UCASE"
-    add_expr: MultiExprExpr = gc.derived_vars[c]
-    assert isinstance(add_expr, MultiExprExpr)
-    assert add_expr.l_expr.stringified_val == c1 and add_expr.r_expr.stringified_val == c2
-    assert gc.vars[0] == var1 and gc.vars[1] == var3
+    assert isinstance(list(gc.expressions.values())[0], Function)
+    assert list(gc.expressions.values())[0].func_name == "UCASE"
+    assert list(gc.derived_vars.values())[0] == "(?count1 + ?count2 AS ?count)"
+    assert set(gc.vars.values()) == set([var1, var3])
     hc_expr: HavingClause = s_mod.having_clause.expressions[0]
     assert isinstance(hc_expr, IdentityFunction) and isinstance(hc_expr.args[0], MultiExprExpr)
     assert isinstance(hc_expr.args[0].l_expr, Function) and isinstance(hc_expr.args[0].r_expr, TerminalExpr)

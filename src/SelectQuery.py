@@ -23,4 +23,9 @@ class SelectQuery:
 
     def set_soln_modifier(self, soln_modifier: SolnModifier) -> None:
         self.soln_modifier = soln_modifier
+
+    def __format__(self, format_spec):
+        return self.__str__()
     
+    def __str__(self):
+        return f"{self.select_clause}{self.dataset_clause}{self.where_clause}{self.soln_modifier}"      

@@ -443,11 +443,11 @@ def test_parser_group_condition() -> None:
     s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
     assert [None, None, None] == [s_mod.having_clause, s_mod.order_clause, s_mod.limit_offset_clause]
     gc: GroupClause = s_mod.group_clause
-    assert gc.vars == [country]
+    assert list(gc.vars.values())[0] == country
     assert len(gc.derived_vars) == 1 and len(gc.expressions) == 2
-    assert isinstance(gc.derived_vars[z], MultiExprExpr) and gc.derived_vars[z].expr_op is ExprOp.ADD
-    assert isinstance(gc.expressions[0], IdentityFunction) and isinstance(gc.expressions[1], Function)
-    assert gc.expressions[0].args[0].func_name == "UCASE" and gc.expressions[1].func_name == "FLOOR"
+    assert list(gc.derived_vars.values())[0] == "(?x + ?y AS ?z)"
+    assert set([f.func_name if isinstance(f, Function) else f.args[0].func_name for f in gc.expressions.values()]) \
+        == set(["FLOOR", "UCASE"])
 
 def test_parser_having_condition() -> None:
     ''' HAVING (UCASE(?lName)) FLOOR(?age)  (?country)'''

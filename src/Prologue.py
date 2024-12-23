@@ -23,3 +23,15 @@ class Prologue:
 
     def remove_all_prefixes(self) -> None:
         self.prefixes = {}
+
+    def __format__(self, format_spec):
+        self.__str__()
+    
+    def __str__(self):
+        base: str = ""
+        if self.base_iri:
+            base = f"BASE {self.base_iri}\n"
+        prefixes: str = ""
+        for prefix, iri in self.prefixes.items():
+            prefixes += f"PREFIX {prefix}: {iri}\n"
+        return f"{base}{prefixes}"

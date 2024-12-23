@@ -11,3 +11,12 @@ class TriplesBlock:
 
     def add_unique_subj_triples(self, unique_subj_triples: List[TriplesSameSubj]) -> None:
         self.unique_subj_triples += unique_subj_triples
+
+    def __format__(self, format_spec):
+        return self.__str__()
+    
+    def __str__(self):
+        output: str = ""
+        for tss in self.unique_subj_triples:
+            output += f"{tss} .\n"
+        return output

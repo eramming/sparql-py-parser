@@ -1,5 +1,6 @@
-from typing import Dict, Set
+from typing import Dict, Set, List
 from .Expressions import Expression
+from collections import defaultdict
 
 class SelectClause:
 
@@ -28,3 +29,19 @@ class SelectClause:
     def add_explicit_vars(self, vars: Set[str]) -> None:
         self.explicit_vars = self.explicit_vars.union(vars)
         self.is_select_all = False
+
+    def __format__(self, format_spec):
+        return self.__str__()
+    
+    def __str__(self):
+        distinct: str = "DISTINCT " if self.is_distinct else ""
+        if self.is_select_all:
+            return f"SELECT {distinct}*\n"
+        ordered_vars: List[str] = sorted(self.explicit_vars.union(self.derived_vars.keys()))
+        output = f"SELECT {distinct}"
+        for var in ordered_vars:
+            if var in self.derived_vars:
+                output += f"({self.derived_vars[var]} AS {var})\n"
+            else:
+                output += f"{var}\n"
+        return output

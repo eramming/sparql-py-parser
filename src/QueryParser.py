@@ -174,7 +174,7 @@ class QueryParser:
         elif next_tok.term is QueryTerm.EXCLAMATION:
             return NegationExpr(self.expression())
         elif next_tok.term is QueryTerm.STRING_LITERAL:
-            return TerminalExpr(next_tok.content)
+            return TerminalExpr(next_tok.content, is_quoted=True)
         elif next_tok.term is QueryTerm.SUB:
             assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
             return TerminalExpr(f"-{tokens.get_now().content}")
