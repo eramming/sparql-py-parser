@@ -25,5 +25,5 @@ def update_truth_lookup(inside_iri_lookup: Dict[int, bool], match: Match) -> Non
     for i in range(match.start(), match.end()):
         inside_iri_lookup[i] = True
 
-def remove_whitespace(input: str) -> str:
+def standardize_whitespace(input: str) -> str:
     return re.sub("( |\n|\t)+", " ", input.strip())

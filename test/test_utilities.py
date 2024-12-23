@@ -1,4 +1,4 @@
-from .utilities_for_test import strip_comments, remove_whitespace
+from .utilities_for_test import strip_comments, standardize_whitespace
 
 def test_strip_comments() -> None:
     query_str: str = '''
@@ -25,4 +25,4 @@ def test_remove_whitespace() -> None:
                 test.  Good  work.
     '''
     expected: str = "Test string! <-spaces <-tab trailing_spaces-> More stuff to test. Good work."
-    assert expected == remove_whitespace(query_str)
+    assert expected == standardize_whitespace(query_str)

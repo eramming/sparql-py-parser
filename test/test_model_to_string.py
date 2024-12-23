@@ -7,7 +7,7 @@ from src import Prologue, DatasetClause, SelectClause, GraphGraphPattern, \
     LimitOffsetClause, OrderClause, Expression, ExprOp, Verb, VarVerb, VerbPath, \
     PathOp, PathMod, NegationExpr, GroupConcatFunction, SubSelect, WhereClause
 from typing import List, Dict, Set
-from .utilities_for_test import remove_whitespace
+from .utilities_for_test import standardize_whitespace
 from copy import deepcopy
 
 def test_prologue_to_str() -> None:
@@ -19,7 +19,7 @@ def test_prologue_to_str() -> None:
         PREFIX foaf: {foaf}
         PREFIX ns: {ns}
     '''
-    assert remove_whitespace(expected) == remove_whitespace(str(prologue))
+    assert standardize_whitespace(expected) == standardize_whitespace(str(prologue))
 
 def test_select_clause_to_str() -> None:
     select: SelectClause = SelectClause()
@@ -33,7 +33,7 @@ def test_select_clause_to_str() -> None:
     select.set_derived_var(avg_temp, Function("AVG", [TerminalExpr(temp)]))
     select.make_distinct()
     expected: str = f"SELECT DISTINCT {altitude} (AVG({temp}) AS {avg_temp}) {temp}"
-    assert expected == remove_whitespace(str(select))
+    assert expected == standardize_whitespace(str(select))
 
 def test_dataset_clause_to_str() -> None:
     ds_id = "<http://ex.com/GraphInstance-1234>"
@@ -45,24 +45,24 @@ def test_ggp_sub_to_str() -> None:
     iri = "ex:GraphInstance-1234"
     graph_graph: GraphGraphPattern = GraphGraphPattern(iri)
     expected: str = f"GRAPH {iri} {{ }}"
-    assert expected == remove_whitespace(str(graph_graph))
+    assert expected == standardize_whitespace(str(graph_graph))
 
     union: UnionGraphPattern = UnionGraphPattern([GroupGraphPatternSub(), GroupGraphPatternSub()])
     expected: str = "{ } UNION { }"
-    assert expected == remove_whitespace(str(union))
+    assert expected == standardize_whitespace(str(union))
     
     optional: OptionalGraphPattern = OptionalGraphPattern()
     expected: str = "OPTIONAL { }"
-    assert expected == remove_whitespace(str(optional))
+    assert expected == standardize_whitespace(str(optional))
 
     minus: MinusGraphPattern = MinusGraphPattern()
     expected: str = "MINUS { }"
-    assert expected == remove_whitespace(str(minus))
+    assert expected == standardize_whitespace(str(minus))
 
     is_silent: bool = True
     service: ServiceGraphPattern = ServiceGraphPattern(is_silent, iri)
     expected: str = f"SERVICE SILENT {iri} {{ }}"
-    assert expected == remove_whitespace(str(service))
+    assert expected == standardize_whitespace(str(service))
 
 def test_pattern_mods() -> None:
     t = "true"
@@ -101,7 +101,7 @@ def test_triples_block_to_str() -> None:
     {s3} {p3_1} {objs3_1.pop()} ;
         {p3_2} {objs3_2.pop()} .
     '''
-    assert remove_whitespace(expected) == remove_whitespace(str(triples_block))
+    assert standardize_whitespace(expected) == standardize_whitespace(str(triples_block))
 
 def test_ggp_to_str() -> None:
     '''
@@ -198,7 +198,7 @@ def test_ggp_to_str() -> None:
         }}
     }}
     '''
-    assert remove_whitespace(expected) == remove_whitespace(str(top_lvl))
+    assert standardize_whitespace(expected) == standardize_whitespace(str(top_lvl))
 
 def test_simple_expr_to_str() -> None:
     num = "-12.7"
@@ -278,4 +278,4 @@ def test_soln_modifier_to_str() -> None:
     OFFSET {offset}
     LIMIT {limit}
     '''
-    assert remove_whitespace(expected) == remove_whitespace(str(soln_mod))
+    assert standardize_whitespace(expected) == standardize_whitespace(str(soln_mod))

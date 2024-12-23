@@ -1,5 +1,5 @@
 from src import QueryParser, Tokenizer, Query
-from .utilities_for_test import remove_whitespace, strip_comments
+from .utilities_for_test import standardize_whitespace, strip_comments
 
 def test_empty() -> None:
     query_str: str = '''
@@ -10,7 +10,7 @@ def test_empty() -> None:
     '''
     
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_select_all() -> None:
     query_str: str = '''
@@ -25,7 +25,7 @@ def test_select_all() -> None:
     '''
     
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_select_by_name() -> None:
     query_str: str = '''
@@ -41,7 +41,7 @@ def test_select_by_name() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_select_with_derived_vars() -> None:
     query_str: str = '''
@@ -56,7 +56,7 @@ def test_select_with_derived_vars() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_optionals() -> None:
     query_str: str = '''
@@ -78,7 +78,7 @@ def test_optionals() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_graph_graph_pattern() -> None:
     query_str: str = '''
@@ -99,7 +99,7 @@ def test_graph_graph_pattern() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_dataset_clause() -> None:
     query_str: str = '''
@@ -112,7 +112,7 @@ def test_dataset_clause() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_built_in_calls() -> None:
     query_str: str = '''
@@ -133,7 +133,7 @@ def test_built_in_calls() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_multi_exprs() -> None:
     query_str: str = '''
@@ -150,7 +150,7 @@ def test_multi_exprs() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_subselect() -> None:
     query_str: str = '''
@@ -167,7 +167,7 @@ def test_subselect() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_complex_ggp() -> None:
     query_str: str = '''
@@ -201,7 +201,7 @@ def test_complex_ggp() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_verb_paths() -> None:
     query_str: str = '''
@@ -215,7 +215,7 @@ def test_verb_paths() -> None:
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))
 
 def test_soln_modifiers() -> None:
     query_str: str = '''
@@ -233,4 +233,4 @@ def test_soln_modifiers() -> None:
     LIMIT 100
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
-    assert remove_whitespace(str(query)) == remove_whitespace(strip_comments(query_str))    
+    assert standardize_whitespace(str(query)) == standardize_whitespace(strip_comments(query_str))    

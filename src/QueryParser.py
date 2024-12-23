@@ -185,7 +185,7 @@ class QueryParser:
         elif next_tok.term is QueryTerm.U_NUMBER_LITERAL:
             return TerminalExpr(next_tok.content)
         elif next_tok.term in [QueryTerm.TRUE, QueryTerm.FALSE]:
-            return TerminalExpr(next_tok.content)
+            return TerminalExpr(next_tok.term.value.lower())
         else:
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
             self.throw_error([QueryTerm.LPAREN, QueryTerm.VARIABLE] + built_in_qts, next_tok)
