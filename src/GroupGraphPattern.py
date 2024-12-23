@@ -45,7 +45,7 @@ class GroupGraphPatternSub:
         ggp_interior: str = "\n\t".join([str(ele) for ele in self.elements_in_order()])
         if ggp_interior == "":
             return "{ }"
-        return f"{{\n\t{ggp_interior}\n}}"
+        return f"{{\n\t{ggp_interior}\n}}\n"
     
     def __format__(self, format_spec):
         return self.__str__()

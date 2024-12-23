@@ -29,10 +29,10 @@ def test_select_all() -> None:
 
 def test_select_by_name() -> None:
     query_str: str = '''
-    base <http://ex.com/#>
-    prefix foaf: <http://xmlns.com/foaf/0.1/>
+    BASE <http://ex.com/#>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
-    SELECT ?person ?fname ?age ?area
+    SELECT ?age ?area ?fname ?person
     WHERE {
         ?person foaf:knows "Albert" ;
                 foaf:givenName ?fname ;
@@ -45,10 +45,10 @@ def test_select_by_name() -> None:
 
 def test_select_with_derived_vars() -> None:
     query_str: str = '''
-    prefix ex: <http://ex.com/department/#>
+    PREFIX ex: <http://ex.com/department/#>
 
     SELECT DISTINCT ?person
-        (SUM(?publishedCount, ?draftCount) AS ?total_count)
+        (SUM(?publishedCount + ?draftCount) AS ?total_count)
     WHERE {
         ?person a ex:Author ;
                 ex:publishedCount ?publishedCount ;
@@ -60,8 +60,8 @@ def test_select_with_derived_vars() -> None:
 
 def test_optionals() -> None:
     query_str: str = '''
-    prefix foaf: <http://xmlns.com/foaf/0.1/>
-    prefix ex: <http://ex.com/department/#>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX ex: <http://ex.com/department/#>
 
     SELECT *
     WHERE {
@@ -82,19 +82,19 @@ def test_optionals() -> None:
 
 def test_graph_graph_pattern() -> None:
     query_str: str = '''
-    prefix ex: <http://ex0.com/department/#>
-    prefix pets: <http://ex1.com/rdf/pet_owners/#>
-    prefix med: <http://ex2.com/rdf/medical/animal/#>
+    PREFIX ex: <http://ex0.com/department/#>
+    PREFIX pets: <http://ex1.com/rdf/pet_owners/#>
+    PREFIX med: <http://ex2.com/rdf/medical/animal/#>
 
-    SELECT ?person ?animal ?graph
+    SELECT ?animal ?graph ?person
     WHERE {
-        ?person a ex:PetOwner
+        ?person a ex:PetOwner .
         GRAPH pets:GraphInstance-1234 {
             ?person pets:hasPet ?pet .
-            ?pet pets:animal_type ?animal
+            ?pet pets:animal_type ?animal .
         }
         GRAPH ?graph {
-            ?animal med:commonHealthIssues "hips"
+            ?animal med:commonHealthIssues "hips" .
         }
     }
     '''
@@ -103,7 +103,7 @@ def test_graph_graph_pattern() -> None:
 
 def test_dataset_clause() -> None:
     query_str: str = '''
-    prefix ex: <http://ex.com/department/#>
+    PREFIX ex: <http://ex.com/department/#>
 
     SELECT ?person
     FROM NAMED <http://ex2.com/pet_owners/Graph-1234>
@@ -116,17 +116,17 @@ def test_dataset_clause() -> None:
 
 def test_built_in_calls() -> None:
     query_str: str = '''
-    PREFIX  dc:  <http://purl.org/dc/elements/1.1/>
-    PREFIX  ns:  <http://example.org/ns#>
+    PREFIX dc: <http://purl.org/dc/elements/1.1/>
+    PREFIX ns: <http://example.org/ns#>
 
-    SELECT  ?lc_title ?oneliner ?max_discount
+    SELECT ?lc_title ?max_discount ?oneliner
     {
         ?x ns:price ?p .
-        ?x ns:discount ?discount
+        ?x ns:discount ?discount .
         ?x dc:title ?title . 
-        BIND (ROUND(?p) AS ?price)
-        BIND (ABS(?discount) AS ?pos_discount)
-        FILTER(STRLEN(?title) < 20)
+        BIND(ROUND(?p) AS ?price)
+        BIND(ABS(?discount) AS ?pos_discount)
+        FILTER (STRLEN(?title) < 20)
         BIND(LCASE(?title) AS ?lc_title)
         BIND(CONCAT(?lc_title, " for ", ?price) AS ?oneliner)
         BIND(MAX(?pos_discount) AS ?max_discount)
@@ -137,16 +137,16 @@ def test_built_in_calls() -> None:
 
 def test_multi_exprs() -> None:
     query_str: str = '''
-    PREFIX  dc:  <http://purl.org/dc/elements/1.1/>
-    PREFIX  ns:  <http://example.org/ns#>
+    PREFIX dc: <http://purl.org/dc/elements/1.1/>
+    PREFIX ns: <http://example.org/ns#>
 
-    SELECT ?person ?fname
+    SELECT ?fname ?person
     WHERE {
         ?x ns:price ?p .
-        ?x ns:discount ?discount
-        BIND (ROUND(?p)*(1-ABS(?discount)) AS ?price)
+        ?x ns:discount ?discount .
+        BIND(ROUND(?p)*(1-ABS(?discount)) AS ?price)
         ?x dc:title ?title .
-        FILTER (((?price/(0.9 + 0.1) != -50.0) || false) && STRLEN(?title) <= (20))
+        FILTER (((?price / (0.9 + 0.1) != -50.0) || false) && STRLEN(?title) <= (20))
     }
     '''
     query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
@@ -154,7 +154,7 @@ def test_multi_exprs() -> None:
 
 def test_subselect() -> None:
     query_str: str = '''
-    prefix ex: <http://ex.com/department/#>
+    PREFIX ex: <http://ex.com/department/#>
 
     SELECT ?name_upper
     WHERE {
@@ -171,19 +171,19 @@ def test_subselect() -> None:
 
 def test_complex_ggp() -> None:
     query_str: str = '''
-    prefix ex: <http://ex.com/department/#>
+    PREFIX ex: <http://ex.com/department/#>
 
-    SELECT ?person ?age ?val ?pet_name ?obj3
+    SELECT ?age ?obj3 ?person ?pet_name ?val
     WHERE {
         {
-            SELECT ?person ?age
+            SELECT ?age ?person
             WHERE {
                 GRAPH ex:MyGraph {
-                    ?person a ex:Person
+                    ?person a ex:Person .
                     OPTIONAL {
-                        ?person ex:age ?age
+                        ?person ex:age ?age .
                     }
-                    FILTER(?age < 18)
+                    FILTER (?age < 18)
                 }
             }
         }
@@ -191,7 +191,7 @@ def test_complex_ggp() -> None:
         {
             BIND(-23.1 AS ?val)
         }
-        ?subj ex:pred ?obj
+        ?subj ex:pred ?obj .
         GRAPH ex:GraphInstance-1234 {
             ?person ex:hasPet ?pet .
             ?pet ex:name ?pet_name .
@@ -205,11 +205,11 @@ def test_complex_ggp() -> None:
 
 def test_verb_paths() -> None:
     query_str: str = '''
-    prefix ex: <http://ex.com/#>
+    PREFIX ex: <http://ex.com/#>
 
     SELECT ?pet_name
     WHERE {
-        ?company ((ex:alias?/ex:hasDepartment/ex:subDept*/ex:member)|ex:owner)/ex:hasPet ?pet .
+        ?company ((ex:alias? / ex:hasDepartment / ex:subDept* / ex:member) | ex:owner) / ex:hasPet ?pet .
         ?pet a ex:Chinchilla ;
             ex:named ?pet_name .
     }
@@ -219,9 +219,9 @@ def test_verb_paths() -> None:
 
 def test_soln_modifiers() -> None:
     query_str: str = '''
-    prefix ex: <http://ex.com/department/#>
+    PREFIX ex: <http://ex.com/department/#>
 
-    SELECT ?person ?fname
+    SELECT ?fname ?person
     WHERE {
         ?a :x ?x ;
            :y ?y .
