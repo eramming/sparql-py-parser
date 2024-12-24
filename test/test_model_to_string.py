@@ -155,10 +155,8 @@ def test_ggp_to_str() -> None:
     sub_sel.set_where_clause(WhereClause(GroupGraphPatternSub(patterns=[gr_gr_1]), True))
     r_union = GroupGraphPatternSub()
     r_union.add_modifier(Bind(TerminalExpr("-23.1"), val))
-    l_union = GroupGraphPatternSub()
-    l_union.add_pattern(sub_sel)
     top_lvl = GroupGraphPatternSub()
-    top_lvl.add_pattern(UnionGraphPattern([l_union, r_union]))
+    top_lvl.add_pattern(UnionGraphPattern([sub_sel, r_union]))
 
     gr_gr_2 = GraphGraphPattern(iri2)
     tb = TriplesBlock()

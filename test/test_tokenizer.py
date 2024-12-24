@@ -292,10 +292,10 @@ def test_tokenizer_number_literal() -> None:
     assert tokens.get_now().term is QueryTerm.ADD
     num2: Token = tokens.get_now()
     assert num2.term == QueryTerm.U_NUMBER_LITERAL and num2.content == "67"
-    assert tokens.get_now().term is QueryTerm.MINUS
+    assert tokens.get_now().term is QueryTerm.SUB
     num3: Token = tokens.get_now()
     assert num3.term == QueryTerm.U_NUMBER_LITERAL and num3.content == "67"
-    assert tokens.get_now().term is QueryTerm.MINUS
+    assert tokens.get_now().term is QueryTerm.SUB
     num4: Token = tokens.get_now()
     assert num4.term == QueryTerm.U_NUMBER_LITERAL and num4.content == "67.0"
     assert tokens.get_now().term is QueryTerm.ADD
@@ -417,9 +417,9 @@ def test_tokenizer_multi_expr_symbols() -> None:
     expected: List[QueryTerm] = [
         QueryTerm.LPAREN, QueryTerm.U_NUMBER_LITERAL, QueryTerm.ADD,
         QueryTerm.LPAREN, QueryTerm.VARIABLE, QueryTerm.DIV,
-        QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN, QueryTerm.MINUS,
+        QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN, QueryTerm.SUB,
         QueryTerm.U_NUMBER_LITERAL, QueryTerm.ADD, QueryTerm.U_NUMBER_LITERAL,
-        QueryTerm.MINUS, QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN,
+        QueryTerm.SUB, QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN,
         QueryTerm.L_OR_EQ, QueryTerm.U_NUMBER_LITERAL, QueryTerm.LOGICAL_AND,
         QueryTerm.U_NUMBER_LITERAL, QueryTerm.LT, QueryTerm.U_NUMBER_LITERAL,
         QueryTerm.LOGICAL_OR, QueryTerm.VARIABLE, QueryTerm.G_OR_EQ,
