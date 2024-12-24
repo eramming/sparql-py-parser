@@ -15,7 +15,7 @@ class Bind(PatternModifier):
         self.var: str = var
 
     def __str__(self):
-        return f"BIND {self.expr} AS ?{self.var}"
+        return f"BIND({self.expr} AS {self.var})"
     
     def __format__(self, format_spec):
         return self.__str__()

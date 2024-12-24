@@ -20,14 +20,17 @@ class Expression:
 # Covers Booleans, Numbers, Strings, Irirefs, Variables
 class TerminalExpr(Expression):
 
-    def __init__(self, stringified_val: str):
+    def __init__(self, stringified_val: str, is_quoted: bool = False):
         super().__init__()
         self.stringified_val: str = stringified_val
+        self.is_quoted: bool = is_quoted
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
+        if self.is_quoted:
+            return f"\"{self.stringified_val}\""
         return self.stringified_val
 
 class NegationExpr(Expression):
@@ -37,7 +40,7 @@ class NegationExpr(Expression):
         self.expr: Expression = expr
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return f"!{self.expr}"
@@ -52,7 +55,7 @@ class MultiExprExpr(Expression):
         self.expr_op: ExprOp = expr_op
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return f"{self.l_expr} {self.expr_op.value} {self.r_expr}"
@@ -72,10 +75,10 @@ class Function(Expression):
         self.func_name = func_name
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
-        arg_str: str = ", ".join(self.args)
+        arg_str: str = ", ".join([str(expr) for expr in self.args])
         return f"{self.func_name.upper()}({arg_str})"
 
 
@@ -90,7 +93,7 @@ class AggregateFunction(Function):
         self.is_distinct = True
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         distinct: str = "DISTINCT " if self.is_distinct else ""
@@ -105,11 +108,11 @@ class GroupConcatFunction(AggregateFunction):
         self.separator = separator
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         distinct: str = "DISTINCT " if self.is_distinct else ""
-        separator_str: str = f"; SEPARATOR='{self.separator}'" if self.separator else ""
+        separator_str: str = f"; SEPARATOR=\"{self.separator}\"" if self.separator else ""
         return f"{self.func_name.upper()}({distinct}{self.args[0]}{separator_str})"
 
 
@@ -117,6 +120,12 @@ class IdentityFunction(Function):
 
     def __init__(self, arg: Expression):
         super().__init__("", [arg])
+
+    def __format__(self, format_spec):
+        return self.__str__()
+    
+    def __str__(self):
+        return f"({self.args[0]})"
 
 
 # class NumberLiteralExpr(Expression):

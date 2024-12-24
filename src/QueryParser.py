@@ -48,6 +48,7 @@ class QueryParser:
         
         next_tok: Token = tokens.get_now()
         if next_tok.term is QueryTerm.EOF:
+            prologue = Prologue() if prologue is None else prologue
             return Query(prologue, select_query)
         else:
             self.throw_error([QueryTerm.EOF], next_tok)
@@ -154,7 +155,7 @@ class QueryParser:
         multi_expr_terms: List[QueryTerm] = [
             QueryTerm.ASTERISK, QueryTerm.EQUALS, QueryTerm.DIV, QueryTerm.ADD,
             QueryTerm.SUB, QueryTerm.LOGICAL_AND, QueryTerm.LT, QueryTerm.GT, QueryTerm.G_OR_EQ,
-            QueryTerm.L_OR_EQ, QueryTerm.NOT_EQ, QueryTerm.EXCLAMATION]
+            QueryTerm.L_OR_EQ, QueryTerm.NOT_EQ, QueryTerm.EXCLAMATION, QueryTerm.LOGICAL_OR]
         expr: Expression = self.expression_helper(tokens)
         if tokens.lookahead().term in multi_expr_terms:
             expr_op: ExprOp = ExprOp(tokens.get_now().term.value)
@@ -174,11 +175,17 @@ class QueryParser:
         elif next_tok.term is QueryTerm.EXCLAMATION:
             return NegationExpr(self.expression())
         elif next_tok.term is QueryTerm.STRING_LITERAL:
-            return TerminalExpr(next_tok.content)
+            return TerminalExpr(next_tok.content, is_quoted=True)
+        elif next_tok.term is QueryTerm.SUB:
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return TerminalExpr(f"-{tokens.get_now().content}")
+        elif next_tok.term is QueryTerm.ADD:
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return TerminalExpr(f"+{tokens.get_now().content}")
         elif next_tok.term is QueryTerm.U_NUMBER_LITERAL:
             return TerminalExpr(next_tok.content)
         elif next_tok.term in [QueryTerm.TRUE, QueryTerm.FALSE]:
-            return TerminalExpr(next_tok.content)
+            return TerminalExpr(next_tok.term.value.lower())
         else:
             built_in_qts: List[QueryTerm] = [QueryTerm(qt_str) for qt_str in QueryTerm.built_in_calls()]
             self.throw_error([QueryTerm.LPAREN, QueryTerm.VARIABLE] + built_in_qts, next_tok)
@@ -326,7 +333,8 @@ class QueryParser:
     def group_graph_pattern_sub(self, tokens: LookaheadQueue, ggp_sub: GroupGraphPatternSub) -> None:
         triples_block_terms: List[QueryTerm] = [
             QueryTerm.VARIABLE, QueryTerm.PREFIXED_NAME_PREFIX, QueryTerm.IRIREF,
-            QueryTerm.U_NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE, QueryTerm.FALSE]
+            QueryTerm.U_NUMBER_LITERAL, QueryTerm.STRING_LITERAL, QueryTerm.TRUE,
+            QueryTerm.FALSE, QueryTerm.ADD, QueryTerm.SUB]
         not_triples_terms: List[QueryTerm] = [
             QueryTerm.OPTIONAL, QueryTerm.GRAPH, QueryTerm.SELECT, QueryTerm.MINUS,
             QueryTerm.FILTER, QueryTerm.BIND, QueryTerm.SERVICE, QueryTerm.LBRACKET]
@@ -413,7 +421,7 @@ class QueryParser:
     
     '''TriplesBlock ::= TriplesSameSubjectPath ('.' TriplesBlock?)? '''
     def triples_block(self, tokens: LookaheadQueue, triples_block: TriplesBlock) -> TriplesBlock:
-        triples_block.add_triples_same_subj(self.triples_same_subj(tokens))
+        triples_block.add_same_subj_triples(self.triples_same_subj(tokens))
         if tokens.lookahead().term is QueryTerm.PERIOD:
             tokens.get_now()
             if tokens.lookahead().term in [QueryTerm.VARIABLE, QueryTerm.IRIREF,
@@ -436,7 +444,15 @@ class QueryParser:
             return lookahead.content
         elif lookahead.term is QueryTerm.STRING_LITERAL:
             tokens.get_now()
-            return lookahead.content
+            return f"\"{lookahead.content}\""
+        elif lookahead.term is QueryTerm.SUB:
+            tokens.get_now()
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return f"-{tokens.get_now().content}"
+        elif lookahead.term is QueryTerm.ADD:
+            tokens.get_now()
+            assert tokens.lookahead().term is QueryTerm.U_NUMBER_LITERAL
+            return f"+{tokens.get_now().content}"
         elif lookahead.term is QueryTerm.U_NUMBER_LITERAL:
             tokens.get_now()
             return lookahead.content

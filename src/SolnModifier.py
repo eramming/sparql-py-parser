@@ -1,5 +1,6 @@
 from .Expressions import Expression
-from typing import Dict, List
+from typing import Dict, List, Any, Tuple
+from uuid import uuid4
 
 class SolnModifier:
 
@@ -22,7 +23,11 @@ class SolnModifier:
         self.limit_offset_clause = limit_offset_clause
 
     def __str__(self):
-        return f"{self.group_clause} {self.having_clause} {self.order_clause} {self.limit_offset_clause}"
+        gc: str = f"{self.group_clause} " if self.group_clause else ""
+        hc: str = f"{self.having_clause} " if self.having_clause else ""
+        oc: str = f"{self.order_clause} " if self.order_clause else ""
+        loc: str = f"{self.limit_offset_clause}" if self.limit_offset_clause else ""
+        return f"{gc}{hc}{oc}{loc}".rstrip() + "\n"
     
     def __format__(self, format_spec):
         return self.__str__()
@@ -31,27 +36,40 @@ class SolnModifier:
 class GroupClause:
 
     def __init__(self):
-        self.expressions: List[Expression] = []
-        self.derived_vars: Dict[str, Expression] = {}
-        self.vars: List[str] = []
+        self.expressions: Dict[str, Expression] = {}
+        self.derived_vars: Dict[str, str] = {}
+        self.vars: Dict[str, str] = {}
+        self.order_of_elements: List[str] = []
 
     def add_expr(self, expr: Expression) -> None:
-        self.expressions.append(expr)
+        uuid: str = uuid4()
+        self.order_of_elements.append(uuid)
+        self.expressions[uuid] = expr
 
     def add_derived_var(self, var: str, expr: Expression) -> None:
-        self.derived_vars[var] = expr
+        uuid: str = uuid4()
+        self.order_of_elements.append(uuid)
+        self.derived_vars[uuid] = f"({expr} AS {var})"
 
     def add_var(self, var: str) -> None:
-        self.vars.append(var)
+        uuid: str = uuid4()
+        self.order_of_elements.append(uuid)
+        self.vars[uuid] = var
 
     def is_empty(self) -> bool:
         return len(self.expressions) + len(self.derived_vars) + len(self.vars) == 0
+    
+    def stringified_elements_in_order(self) -> List[Any]:
+        all_elements: Dict[str, Any] = self.expressions | self.derived_vars | self.vars
+        return [str(all_elements[uuid]) for uuid in self.order_of_elements]
+    
+    def in_order_exprs(self) -> List[Expression]:
+        return [self.expressions[uuid] for uuid in self.order_of_elements if uuid in self.expressions]
 
     def __str__(self):
-        output: str = (f"GROUP BY {' '.join(self.expressions)} "
-                       f"{' '.join(self.derived_vars)} "
-                       f"{' '.join(self.vars)}")
-        return output
+        if self.is_empty():
+            return ""
+        return f"GROUP BY {' '.join(self.stringified_elements_in_order())}"
     
     def __format__(self, format_spec):
         return self.__str__()
@@ -66,7 +84,9 @@ class HavingClause:
         self.expressions.append(expr)
 
     def __str__(self):
-        return f"HAVING {' '.join(self.expressions)}"
+        if len(self.expressions) == 0:
+            return ""
+        return f"HAVING {' '.join([str(ex) for ex in self.expressions])}"
     
     def __format__(self, format_spec):
         return self.__str__()
@@ -84,7 +104,9 @@ class OrderClause:
         return len(self.expressions) == 0
 
     def __str__(self):
-        return f"ORDER BY {' '.join(self.expressions)}"
+        if len(self.expressions) == 0:
+            return ""
+        return f"ORDER BY {' '.join([str(ex) for ex in self.expressions])}"
     
     def __format__(self, format_spec):
         return self.__str__()

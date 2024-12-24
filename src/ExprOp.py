@@ -7,6 +7,7 @@ class ExprOp(Enum):
     SUB = "-"
     NOT = "!"
     AND = "&&"
+    OR = "||"
     EQUALS = "="
     LT = "<"
     GT = ">"

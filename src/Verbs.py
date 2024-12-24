@@ -38,7 +38,7 @@ class IdentityVerbPath(UnaryVerbPath):
         super().__init__(verb_path)
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return f"({self.verb_path})"
@@ -53,7 +53,7 @@ class MultiPathVerbPath(VerbPath):
         self.path_op: PathOp = path_op
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return f"{self.l_path} {self.path_op.value} {self.r_path}"
@@ -65,7 +65,7 @@ class InverseVerbPath(UnaryVerbPath):
         super().__init__(verb_path)
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return f"^{self.verb_path}"
@@ -78,12 +78,13 @@ class ElementVerbPath(UnaryVerbPath):
         self.path_mod: PathMod = path_mod
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return f"{self.verb_path}{self.path_mod.value}"
 
 
+# Covers Iri and 'a'
 class TerminalVerbPath(VerbPath):
 
     def __init__(self, stringified_val: str):
@@ -91,7 +92,7 @@ class TerminalVerbPath(VerbPath):
         self.stringified_val: str = stringified_val
 
     def __format__(self, format_spec):
-        self.__str__()
+        return self.__str__()
     
     def __str__(self):
         return self.stringified_val

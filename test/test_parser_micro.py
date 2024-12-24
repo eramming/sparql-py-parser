@@ -364,7 +364,7 @@ def test_parser_var_or_term() -> None:
         [Token(qt.TRUE)],
         [Token(qt.U_NUMBER_LITERAL, num)],
         [Token(qt.FALSE)]]
-    expected: List[str] = [iriref, f":{word}", var, lit, "true", num, "false"]
+    expected: List[str] = [iriref, f":{word}", var, f"\"lit\"", "true", num, "false"]
     for tokens, expected_iri in zip(tok_list_of_lists, expected):
         tok_queue: LookaheadQueue = LookaheadQueue()
         tok_queue.put_all(tokens)
@@ -396,8 +396,8 @@ def test_parser_property_list_path_not_empty() -> None:
         var_verb, path_verb = keys[1], keys[0]
     else:
         raise ValueError("Expected one of the verbs to be VarVerb")
-    assert props[var_verb] == set([taco, fajita])
-    assert props[path_verb] == set([lemonade])
+    assert props[var_verb] == set([f"\"{taco}\"", f"\"{fajita}\""])
+    assert props[path_verb] == set([f"\"{lemonade}\""])
     assert path_verb.path_op is PathOp.OR
     assert path_verb.l_path.stringified_val == "a" and path_verb.r_path.stringified_val == f"{ex}:{drink}"
     
@@ -443,11 +443,13 @@ def test_parser_group_condition() -> None:
     s_mod: SolnModifier = QueryParser().solution_modifier(tok_queue)
     assert [None, None, None] == [s_mod.having_clause, s_mod.order_clause, s_mod.limit_offset_clause]
     gc: GroupClause = s_mod.group_clause
-    assert gc.vars == [country]
-    assert len(gc.derived_vars) == 1 and len(gc.expressions) == 2
-    assert isinstance(gc.derived_vars[z], MultiExprExpr) and gc.derived_vars[z].expr_op is ExprOp.ADD
-    assert isinstance(gc.expressions[0], IdentityFunction) and isinstance(gc.expressions[1], Function)
-    assert gc.expressions[0].args[0].func_name == "UCASE" and gc.expressions[1].func_name == "FLOOR"
+    assert list(gc.vars.values())[0] == country
+    assert len(gc.derived_vars) == 1 and len(gc.expressions) == 2 and len(gc.vars) == 1
+    assert list(gc.derived_vars.values())[0] == "(?x + ?y AS ?z)"
+    exprs: List[Expression] = gc.in_order_exprs()
+    assert isinstance(exprs[0], IdentityFunction) and isinstance(exprs[0].args[0], Function)
+    assert isinstance(exprs[1], Function)
+    assert exprs[0].args[0].func_name == "UCASE" and exprs[1].func_name == "FLOOR"
 
 def test_parser_having_condition() -> None:
     ''' HAVING (UCASE(?lName)) FLOOR(?age)  (?country)'''

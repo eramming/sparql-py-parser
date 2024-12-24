@@ -49,7 +49,7 @@ def test_parser_select_clause() -> None:
         tok_queue.put(token)
     query: Query = QueryParser().parse(tok_queue)
     select_clause: SelectClause = query.select_query.select_clause
-    assert query.prologue is None
+    assert query.prologue.base_iri is None and len(query.prologue.prefixes) == 0
     assert select_clause.explicit_vars == set([fname, age, lname])
     assert select_clause.is_distinct
     assert not select_clause.is_select_all
@@ -121,11 +121,11 @@ def test_parser_where_clause() -> None:
     assert isinstance(elements[2], Filter)
     assert isinstance(elements[3], GraphGraphPattern)
     assert isinstance(elements[4], TriplesBlock)
-    assert [elements[1].triples_same_subj[0].subj, elements[1].triples_same_subj[1].subj] == [p1, p2]
+    assert [elements[1].unique_subj_triples[0].subj, elements[1].unique_subj_triples[1].subj] == [p1, p2]
     assert isinstance(elements[2].expr, IdentityFunction)
     assert isinstance(elements[2].expr.args[0], MultiExprExpr)
     assert elements[3].var_or_iri == my_graph
-    assert elements[4].triples_same_subj[0].subj == p3
+    assert elements[4].unique_subj_triples[0].subj == p3
 
 def test_parser_where_clause_sub_select() -> None:
     '''WHERE {
@@ -155,8 +155,8 @@ def test_parser_where_clause_sub_select() -> None:
     ggp_sub: GroupGraphPatternSub = sub_select.where_clause.ggp
     assert isinstance(ggp_sub, GroupGraphPatternSub)
     assert [len(ggp_sub.order_of_elements), len(ggp_sub.triples_blocks)] == [1, 1]
-    assert len(ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].triples_same_subj) == 1
-    assert ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].triples_same_subj[0].subj == var
+    assert len(ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].unique_subj_triples) == 1
+    assert ggp_sub.triples_blocks[ggp_sub.order_of_elements[0]].unique_subj_triples[0].subj == var
 
 def test_parser_soln_modifiers() -> None:
     '''
@@ -186,11 +186,10 @@ def test_parser_soln_modifiers() -> None:
     s_mod: SolnModifier = QueryParser().parse(tok_queue).select_query.soln_modifier
     gc: GroupClause = s_mod.group_clause
     assert [len(gc.expressions), len(gc.derived_vars), len(gc.vars)] == [1, 1, 2]
-    assert isinstance(gc.expressions[0], Function) and gc.expressions[0].func_name == "UCASE"
-    add_expr: MultiExprExpr = gc.derived_vars[c]
-    assert isinstance(add_expr, MultiExprExpr)
-    assert add_expr.l_expr.stringified_val == c1 and add_expr.r_expr.stringified_val == c2
-    assert gc.vars[0] == var1 and gc.vars[1] == var3
+    assert isinstance(list(gc.expressions.values())[0], Function)
+    assert list(gc.expressions.values())[0].func_name == "UCASE"
+    assert list(gc.derived_vars.values())[0] == "(?count1 + ?count2 AS ?count)"
+    assert set(gc.vars.values()) == set([var1, var3])
     hc_expr: HavingClause = s_mod.having_clause.expressions[0]
     assert isinstance(hc_expr, IdentityFunction) and isinstance(hc_expr.args[0], MultiExprExpr)
     assert isinstance(hc_expr.args[0].l_expr, Function) and isinstance(hc_expr.args[0].r_expr, TerminalExpr)

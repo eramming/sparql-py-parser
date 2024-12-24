@@ -46,6 +46,44 @@ def test_tokenizer_prologue_with_base() -> None:
     assert iriref2.content == "<http://example2-company.org/>"
     assert tokens.get_now().term == QueryTerm.EOF
 
+def test_tokenizer_prefixed_names() -> None:
+    query_str: str = '''
+        ex: : :pred ex:pred
+        '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_PREFIX
+    assert tokens.get_now().term is QueryTerm.COLON
+    assert tokens.get_now().term is QueryTerm.COLON
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_LOCAL
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_PREFIX
+    assert tokens.get_now().term is QueryTerm.COLON
+    assert tokens.get_now().term is QueryTerm.PREFIXED_NAME_LOCAL
+    assert tokens.get_now().term == QueryTerm.EOF
+
+def test_tokenizer_boolean_literals() -> None:
+    query_str: str = '''
+        (true) TrUe=FALSE trUe&&TRUE false||true FALSE
+        '''
+    tokenizer: Tokenizer = Tokenizer()
+    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
+
+    assert tokens.get_now().term is QueryTerm.LPAREN
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.RPAREN
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.EQUALS
+    assert tokens.get_now().term is QueryTerm.FALSE
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.LOGICAL_AND
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.FALSE
+    assert tokens.get_now().term is QueryTerm.LOGICAL_OR
+    assert tokens.get_now().term is QueryTerm.TRUE
+    assert tokens.get_now().term is QueryTerm.FALSE
+    assert tokens.get_now().term == QueryTerm.EOF
+
 def test_tokenizer_unusual_iriref() -> None:
     query_str: str = '''
         PREFIX xsd: <UCASE(?var)7+8-10/1#> '''
@@ -254,10 +292,10 @@ def test_tokenizer_number_literal() -> None:
     assert tokens.get_now().term is QueryTerm.ADD
     num2: Token = tokens.get_now()
     assert num2.term == QueryTerm.U_NUMBER_LITERAL and num2.content == "67"
-    assert tokens.get_now().term is QueryTerm.MINUS
+    assert tokens.get_now().term is QueryTerm.SUB
     num3: Token = tokens.get_now()
     assert num3.term == QueryTerm.U_NUMBER_LITERAL and num3.content == "67"
-    assert tokens.get_now().term is QueryTerm.MINUS
+    assert tokens.get_now().term is QueryTerm.SUB
     num4: Token = tokens.get_now()
     assert num4.term == QueryTerm.U_NUMBER_LITERAL and num4.content == "67.0"
     assert tokens.get_now().term is QueryTerm.ADD
@@ -331,14 +369,6 @@ def test_tokenizer_path_primaries() -> None:
     assert local_name.term == QueryTerm.PREFIXED_NAME_LOCAL
     assert local_name.content == "Place"
     assert tokens.get_now().term is QueryTerm.EOF
-
-def test_tokenizer_boolean_literals() -> None:
-    query_str: str = ''' TRUE FALSE '''
-
-    tokenizer: Tokenizer = Tokenizer()
-    tokens: LookaheadQueue = tokenizer.tokenize(query_str)
-    assert tokens.get_now().term is QueryTerm.TRUE
-    assert tokens.get_now().term is QueryTerm.FALSE
     
 def test_tokenizer_ggp_terms() -> None:
     query_str: str = '''
@@ -387,9 +417,9 @@ def test_tokenizer_multi_expr_symbols() -> None:
     expected: List[QueryTerm] = [
         QueryTerm.LPAREN, QueryTerm.U_NUMBER_LITERAL, QueryTerm.ADD,
         QueryTerm.LPAREN, QueryTerm.VARIABLE, QueryTerm.DIV,
-        QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN, QueryTerm.MINUS,
+        QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN, QueryTerm.SUB,
         QueryTerm.U_NUMBER_LITERAL, QueryTerm.ADD, QueryTerm.U_NUMBER_LITERAL,
-        QueryTerm.MINUS, QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN,
+        QueryTerm.SUB, QueryTerm.U_NUMBER_LITERAL, QueryTerm.RPAREN,
         QueryTerm.L_OR_EQ, QueryTerm.U_NUMBER_LITERAL, QueryTerm.LOGICAL_AND,
         QueryTerm.U_NUMBER_LITERAL, QueryTerm.LT, QueryTerm.U_NUMBER_LITERAL,
         QueryTerm.LOGICAL_OR, QueryTerm.VARIABLE, QueryTerm.G_OR_EQ,

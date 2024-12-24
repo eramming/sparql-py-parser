@@ -83,6 +83,7 @@ this parsing library. Features left out include:
 * Typing using `^^`
 * `ConstructQuery`, `DescribeQuery`, `AskQuery`
 * `ValuesClause`
+* `InlineData`
 * `PathNegatedPropertySet`
 * `TriplesNodePath`
 * `Update`

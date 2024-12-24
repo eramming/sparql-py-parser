@@ -25,6 +25,8 @@ class Tokenizer:
         if not matched:
             matched = self.tokenize_unary_identifiers(query_str, tokens)
         if not matched:
+            matched = self.tokenize_bool_literals(query_str, tokens)
+        if not matched:
             matched = self.tokenize_keyword(query_str, tokens)
         if not matched:
             matched = self.tokenize_prefixed_name_prefix(query_str, tokens)
@@ -90,7 +92,7 @@ class Tokenizer:
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "-":
-            tokens.put(Token(QueryTerm.MINUS))
+            tokens.put(Token(QueryTerm.SUB))
             remainder: str = query_str[1:].lstrip()
             self.tokenize_helper(remainder, tokens)
         elif first_letter == "|":
@@ -128,7 +130,14 @@ class Tokenizer:
         elif first_letter == ":":
             tokens.put(Token(QueryTerm.COLON))
             remainder: str = query_str[1:].lstrip()
-            self.tokenize_helper(remainder, tokens)
+            pattern: str = "(^([a-zA-Z_:0-9]|%[0-9A-Fa-f]{2})"
+            pattern += "(([a-zA-Z_:0-9\\-\\.]|%[0-9A-Fa-f]{2})*"
+            pattern += "[a-zA-Z_:0-9\\-]|%[0-9A-Fa-f]{2})?)"
+            match: Match = re.search(pattern, remainder)
+            if match:
+                self.prefixed_name_local_tokenizer(remainder, tokens)    
+            else:
+                self.tokenize_helper(remainder, tokens)
         elif first_letter == ".":
             tokens.put(Token(QueryTerm.PERIOD))
             remainder: str = query_str[1:].lstrip()
@@ -161,6 +170,17 @@ class Tokenizer:
             matched = False
         return matched
         
+    def tokenize_bool_literals(self, query_str: str, tokens: LookaheadQueue) -> bool:
+        matched: bool = False
+        match: Match = re.search("^(true|false)(\\(|=|\\s|$|&|\\||\\))", query_str, flags=re.IGNORECASE)
+        if not match:
+            return False
+        word: str = match.groups()[0].upper()
+        tokens.put(Token(QueryTerm.from_keyword(word)))
+        remainder: str = query_str[len(word):].lstrip()
+        self.tokenize_helper(remainder, tokens)
+        return True
+
     def tokenize_keyword(self, query_str: str, tokens: LookaheadQueue) -> bool:
         matched: bool = False
         match: Match = re.search("^([a-zA-Z][a-zA-Z_]*)(\\(|{|=|\\s|$)", query_str)
