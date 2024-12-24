@@ -58,10 +58,6 @@ class MultiExprExpr(Expression):
         return self.__str__()
     
     def __str__(self):
-        if self.l_expr is None or self.r_expr is None:
-            print("Uhh ohh")
-        if self.expr_op is None:
-            print("Ahh")
         return f"{self.l_expr} {self.expr_op.value} {self.r_expr}"
 
 
