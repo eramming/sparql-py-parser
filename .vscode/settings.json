@@ -6,6 +6,6 @@
     "python.testing.pytestEnabled": true,
     "flake8.args": [
         "--max-line-length=120",
-        "--ignore=E402,E721,F841,F401,E302,E305,W293,W291",
+        "--ignore=E402,E721,F841,F401,E302,E305,W293,W291,W503",
     ]
 }

@@ -6,35 +6,28 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-[![Contributors][contributors-shield]][contributors-url]
+<!-- [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+[![LinkedIn][linkedin-shield]][linkedin-url] -->
 
 
 
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/sparql.png" alt="Sparql Parser" width="80" height="80">
+  <a>
+    <img src="images/sparql.png" alt="Sparql Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Sparql Query Parser</h3>
 
   <p align="center">
-    An parser for sparql queries that allows for detailed query validation piecemeal query creation/editing.
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
+    A parser for sparql queries whose output is a Python model of an ingested query.
     <br />
     <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -46,9 +39,6 @@
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
@@ -58,11 +48,9 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
 
@@ -73,37 +61,38 @@
 
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
-This project offers a simple solution for programmatic sparql query manipulation and client-side validation. Similar projects, like SparqlWrapper will send their rest request to a remote endpoint where it is evaluated at runtime just before the actual query execution. 
+This project uses recursive descent parsing to build an in-memory Python model of an ingested sparql query. This model can then be modified using method calls, and eventually be converted back to a sparql string. The library could also be used for sparql validation.
 
-While the Java ecosystem has great options for this, like Apache Jena, I coulnd't find a solution in Python. RDFLIB (the parent project to SparqlWrapper) has some great features including RESTfully sending a query to a triple store endpoint, providing an in-memory triple store, and . However, I found nothing that let you programmatically manipulate a query. , but you couldn't load in a sparql string and then programmatically edit it. Want to throw in a named graph condition? Can't do it. You better start using python's string library to find keywords and then do a string replace. This, of course, can work. But for more complicated queries, with nested select clauses for instance, make string replacing clunky and near-impossible. This program uses a grammar, sourced from the actual sparql specifications, and recursive descent parsing to allow for easy query manipulation.
+While similar projects do exist in the Python ecosystem, I could find none that built a Python model for the developer to play with. SparqlWrapper is a transport library more interested in http details than query building/validation. You must rely on the server-side for validation in this case. While RDFLIB (the parent project to SparqlWrapper) has some great features as well, including an in-memory triple store, it too offers nothing on the query building front.
 
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
+Here's an example to highlight the usefulness of an in-memory model of a query. Suppose you have an existing Select query. For testing, you decide to select only from a newly created, testing-specific named graph. Without this library, you would be reliant on string manipulation -- searching for keywords, splicing, and inserting. Personally, this feels a code smell to me, but could work. But as the complexity of your query increases, with nested select clauses for instance, string manipulation becomes near-impossible.
 
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
+The Java ecosystem appears to be well ahead on this front -- I believe Apache Jena has functionality to do what this project accomplishes. Hopefully this will allow Python developers to more fully enter the world of semantic web technologies. 
 
-Use the `BLANK_README.md` to get started.
+This library was built according to the Sparql 1.1 documented grammar described here:
+https://www.w3.org/TR/sparql11-query/#sparqlGrammar
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
-### Built With
-
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+### Limitations
+This was a rushed implementation of the grammar. I did my best to ensure all that was
+implemented is accurate and fully tested. However, I had to leave some features out.
+I would expect these features to be added easily, should a developer wish to augment
+this parsing library. Features left out include:
+* Typing using `^^`
+* `ConstructQuery`, `DescribeQuery`, `AskQuery`
+* `ValuesClause`
+* `InlineData`
+* `PathNegatedPropertySet`
+* `TriplesNodePath`
+* `Update`
+* Conflation of iriref with '<' or '<='
+  - It seems to me an inherent flaw with the sparql grammar. Seems like a double angle bracket ('<<' and '>>') should be used for irirefs. This parser will first attempt to make an iriref, and if not, will turn a '<' or '<=' less than and less than or equal respectively.
+  - If you see an iriref created where you don't intend, simply add a whitespace within
+  - E.g., which is 7<8&&8>7
+    * U_NUMBER_LITERAL, IRIREF, then U_NUMBER_LITERAL (what this library will do)
+    * U_NUMBER_LITERAL, LT, U_NUMBER_LITERAL, LOGICAL_AND, U_NUMBER_LITERAL, GT, U_NUMBER_LITERAL
 
 
 
@@ -157,25 +146,6 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -185,18 +155,10 @@ If you have a suggestion that would make this better, please fork the repo and c
 Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+2. Create your Feature Branch (`git switch -c feature/AmazingFeature`)
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-### Top contributors:
-
-<a href="https://github.com/othneildrew/Best-README-Template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=othneildrew/Best-README-Template" alt="contrib.rocks image" />
-</a>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
@@ -208,31 +170,12 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
 <!-- CONTACT -->
 ## Contact
 
 Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
 
 Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
