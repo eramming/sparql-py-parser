@@ -1,0 +1,229 @@
+prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+prefix kgs: <http://www.bbn.com/ontologies/rush/knowledge-gain-system#>
+prefix abox: <http://www.bbn.com/abox/rush/decomposer#>
+
+SELECT DISTINCT 
+    ?uuid ?producer_uuid ?original_producer_uuid 
+    ?lineage_key ?lineage_parents 
+    ?alert_type ?title ?score ?classification
+    ?alert_start_date ?alert_end_date ?alert_create_date
+    ?triple ?subject ?verb ?object ?confidence 
+    ?location ?lat ?lon ?location_covariance
+    ?velocity ?velocity_lon ?velocity_lat
+    ?confidence
+    ?object_uuid
+
+    ?triple ?subject ?verb ?object
+    (GROUP_CONCAT(DISTINCT ?concat_subject_attribute; SEPARATOR=" ~~~~ ") AS ?subject_attributes)
+    (GROUP_CONCAT(DISTINCT ?concat_object_attribute; SEPARATOR=" ~~~~ ") AS ?object_attributes)
+
+    ?object_id ?object_id_priority ?object_id_label ?object_id_uuid
+    (GROUP_CONCAT(DISTINCT(?concat_object_id_alias); SEPARATOR=" ~~~~ ") AS ?object_id_aliases)
+    (GROUP_CONCAT(DISTINCT(?concat_object_id_attribute); SEPARATOR=" ~~~~ ") AS ?object_id_attributes)
+
+    ?object_type ?object_type_priority ?object_type_label ?object_type_uuid
+    (GROUP_CONCAT(DISTINCT(?concat_object_type_alias); SEPARATOR=" ~~~~ ") AS ?object_type_aliases)
+    (GROUP_CONCAT(DISTINCT(?concat_object_type_attribute); SEPARATOR=" ~~~~ ") AS ?object_type_attributes)
+WHERE {
+    {
+        SELECT DISTINCT ?uuid ?producer_uuid ?original_producer_uuid 
+            ?lineage_key ?lineage_parents 
+            ?alert_type ?title ?score ?classification
+            ?alert_start_date ?alert_end_date ?alert_create_date
+            ?triple ?subject ?verb ?object ?confidence 
+            ?location ?lat ?lon ?location_covariance
+            ?velocity ?velocity_lon ?velocity_lat
+            ?confidence
+            ?object_uuid
+
+            ?triple_obj
+            ?object_id_obj
+            ?object_type_obj
+        WHERE {
+            ?entry a kgs:Evidence ;
+                kgs:alertUUID ?uuid ;
+                kgs:producerUUID ?producer_uuid ;
+                kgs:originalProducerUUID ?original_producer_uuid ;
+                kgs:objectUUID ?object_uuid ;
+                kgs:lineageKey ?lineage_key ;
+                kgs:lineageParents ?lineage_parents ;
+                kgs:alertType ?alert_type ;
+                kgs:title ?title ;
+                kgs:score ?score ;
+                kgs:classification ?classification ;
+                kgs:alertStartDate ?alert_start_date ;
+                kgs:alertEndDate ?alert_end_date ;
+                kgs:alertCreateDate ?alert_create_date ;
+                kgs:confidence ?confidence ;
+                kgs:location ?location ;
+                kgs:latitude ?lat ;
+                kgs:longitude ?lon ;
+                kgs:locationCovariance ?location_covariance ;
+                kgs:velocity ?velocity ;
+                kgs:velocityLongitude ?velocity_lon ;
+                kgs:velocityLatitude ?velocity_lat .
+
+            OPTIONAL { ?entry kgs:Triple ?triple_obj . }
+            OPTIONAL { ?entry kgs:ObjectID ?object_id_obj . }
+            OPTIONAL { ?entry kgs:ObjectType ?object_type_obj . }
+        }
+    }
+
+    ?triple_obj kgs:triple ?triple ;
+                kgs:subject ?subject ;
+                kgs:verb ?verb ;
+                kgs:object ?object .
+
+    OPTIONAL {
+        ?triple_obj kgs:SubjectAttribute ?subject_attribute .
+
+        ?subject_attribute kgs:key ?subject_attribute_key ;
+                        kgs:value ?subject_attribute_value ;
+                        kgs:type ?subject_attribute_type ;
+                        kgs:classification ?subject_attribute_classification ;
+                        kgs:classified_by ?subject_attribute_classified_by ;
+                        kgs:declassify_on ?subject_attribute_declassify_on .
+
+        BIND(
+            CONCAT(
+                ?subject_attribute_key, " ---- ",
+                ?subject_attribute_value, " ---- ",
+                ?subject_attribute_type, " ---- ",
+                ?subject_attribute_classification, " ---- ",
+                ?subject_attribute_classified_by, " ---- ",
+                ?subject_attribute_declassify_on
+            ) 
+            AS ?concat_subject_attribute
+        )
+    }
+
+    OPTIONAL {
+        ?triple_obj kgs:ObjectAttribute ?object_attribute .
+
+        ?object_attribute kgs:key ?object_attribute_key ;
+                        kgs:value ?object_attribute_value ;
+                        kgs:type ?object_attribute_type ;
+                        kgs:classification ?object_attribute_classification ;
+                        kgs:classified_by ?object_attribute_classified_by ;
+                        kgs:declassify_on ?object_attribute_declassify_on .
+
+        BIND(
+            CONCAT(
+                ?object_attribute_key, " ---- ",
+                ?object_attribute_value, " ---- ",
+                ?object_attribute_type, " ---- ",
+                ?object_attribute_classification, " ---- ",
+                ?object_attribute_classified_by, " ---- ",
+                ?object_attribute_declassify_on
+            ) 
+            AS ?concat_object_attribute
+        )
+    }
+
+
+    ?object_id_obj kgs:id ?object_id ;
+                   kgs:priority ?object_id_priority ;
+                   kgs:label ?object_id_label ;
+                   kgs:uuid ?object_id_uuid .
+
+    OPTIONAL {
+        ?object_id_obj kgs:hasAlias ?object_id_alias .
+
+        ?object_id_alias kgs:id ?object_id_alias_id ;
+                        kgs:priority ?object_id_alias_priority ;
+                        kgs:label ?object_id_alias_label ;
+                        kgs:uuid ?object_id_alias_uuid .
+
+        BIND(
+            CONCAT(
+                ?object_id_alias_id, " ---- ",
+                ?object_id_alias_priority, " ---- ",
+                ?object_id_alias_label, " ---- ",
+                ?object_id_alias_uuid
+            ) 
+            AS ?concat_object_id_alias
+        )
+    }
+
+    OPTIONAL {
+        ?object_id_obj kgs:hasAttribute ?object_id_attribute .
+
+        ?object_id_attribute kgs:key ?object_id_attribute_key ;
+                            kgs:value ?object_id_attribute_value ;
+                            kgs:type ?object_id_attribute_type ;
+                            kgs:classification ?object_id_attribute_classification ;
+                            kgs:classified_by ?object_id_attribute_classified_by ;
+                            kgs:declassify_on ?object_id_attribute_declassify_on .
+
+        BIND(
+            CONCAT(
+                ?object_id_attribute_key, " ---- ",
+                ?object_id_attribute_value, " ---- ",
+                ?object_id_attribute_type, " ---- ",
+                ?object_id_attribute_classification, " ---- ",
+                ?object_id_attribute_classified_by, " ---- ",
+                ?object_id_attribute_declassify_on
+            ) 
+            AS ?concat_object_id_attribute
+        )
+    }
+
+    ?object_type_obj kgs:id ?object_type ;
+                    kgs:priority ?object_type_priority ;
+                    kgs:label ?object_type_label ;
+                    kgs:uuid ?object_type_uuid .
+
+    OPTIONAL {
+        ?object_type_obj kgs:hasAlias ?object_type_alias .
+
+        ?object_type_alias kgs:id ?object_type_alias_type ;
+                        kgs:priority ?object_type_alias_priority ;
+                        kgs:label ?object_type_alias_label ;
+                        kgs:uuid ?object_type_alias_uuid .
+
+        BIND(
+            CONCAT(
+                ?object_type_alias_type, " ---- ",
+                ?object_type_alias_priority, " ---- ",
+                ?object_type_alias_label, " ---- ",
+                ?object_type_alias_uuid
+            ) 
+            AS ?concat_object_type_alias
+        )
+    }
+
+    OPTIONAL {
+        ?object_type_obj kgs:hasAttribute ?object_type_attribute .
+
+        ?object_type_attribute kgs:key ?object_type_attribute_key ;
+                            kgs:value ?object_type_attribute_value ;
+                            kgs:type ?object_type_attribute_type ;
+                            kgs:classification ?object_type_attribute_classification ;
+                            kgs:classified_by ?object_type_attribute_classified_by ;
+                            kgs:declassify_on ?object_type_attribute_declassify_on .
+
+        BIND(
+            CONCAT(
+                ?object_type_attribute_key, " ---- ",
+                ?object_type_attribute_value, " ---- ",
+                ?object_type_attribute_type, " ---- ",
+                ?object_type_attribute_classification, " ---- ",
+                ?object_type_attribute_classified_by, " ---- ",
+                ?object_type_attribute_declassify_on
+            ) 
+            AS ?concat_object_type_attribute
+        )
+    }
+}
+GROUP BY ?uuid ?producer_uuid ?original_producer_uuid 
+    ?lineage_key ?lineage_parents 
+    ?alert_type ?title ?score ?classification
+    ?alert_start_date ?alert_end_date ?alert_create_date
+    ?triple ?subject ?verb ?object ?confidence 
+    ?location ?lat ?lon ?location_covariance
+    ?velocity ?velocity_lon ?velocity_lat
+    ?triple ?subject ?verb ?object
+    ?object_id ?object_id_priority ?object_id_label ?object_id_uuid
+    ?object_type ?object_type_priority ?object_type_label ?object_type_uuid
+    ?object_uuid
