@@ -24,4 +24,8 @@ class SubSelect(GroupGraphPattern):
         return self.__str__()
     
     def __str__(self):
-        return f"{{\n\t{self.select_clause}{self.where_clause}{self.soln_modifier}\n}}"
+        sub_select_interior: str = f"{self.select_clause}{self.where_clause}{self.soln_modifier}"
+        formatted_sub_select: str = ""
+        for line in sub_select_interior.splitlines(keepends=True):
+            formatted_sub_select += f"\t{line}"
+        return f"{{\n{formatted_sub_select}\n}}\n"

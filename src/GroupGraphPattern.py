@@ -2,7 +2,7 @@ from uuid import uuid4
 from typing import List, Dict, Any
 from .TriplesBlock import TriplesBlock
 from .PatternModifiers import PatternModifier
-
+from copy import deepcopy
 
 class GroupGraphPattern:
 
@@ -37,19 +37,40 @@ class GroupGraphPatternSub:
         self.order_of_elements.append(uuid)
         self.patterns[uuid] = pattern
 
+    def remove_by_indx(self, indx: int) -> None:
+        if not (0 <= indx < len(self.order_of_elements)):
+            raise ValueError("Attempted to remove at an invalid index: "
+                             f"{indx} out of {len(self.order_of_elements)} elements")
+        uuid: str = self.order_of_elements[indx]
+        del self.order_of_elements[indx]
+        if uuid in self.patterns:
+            del self.patterns[uuid]
+        elif uuid in self.modifiers:
+            del self.modifiers[uuid]
+        elif uuid in self.triples_blocks:
+            del self.triples_blocks[uuid]
+
     def elements_in_order(self) -> List[Any]:
         all_elements: Dict[str, Any] = self.triples_blocks | self.modifiers | self.patterns
         return [all_elements[uuid] for uuid in self.order_of_elements]
+    
+    def load_from_other_ggp_sub(self, ggp_sub: 'GroupGraphPatternSub') -> 'GroupGraphPatternSub':
+        self.triples_blocks = deepcopy(ggp_sub.triples_blocks)
+        self.modifiers = deepcopy(ggp_sub.modifiers)
+        self.patterns = deepcopy(ggp_sub.patterns)
+        self.order_of_elements = deepcopy(ggp_sub.order_of_elements)
 
     def __str__(self):
-        ggp_interior: str = "\n\t".join([str(ele) for ele in self.elements_in_order()])
+        ggp_interior: str = "\n".join([str(ele) for ele in self.elements_in_order()])
         if ggp_interior == "":
             return "{ }"
-        return f"{{\n\t{ggp_interior}\n}}\n"
+        formatted_ggp_interior: str = ""
+        for line in ggp_interior.splitlines(keepends=True):
+            formatted_ggp_interior += f"\t{line}"
+        return f"{{\n{formatted_ggp_interior}\n}}"
     
     def __format__(self, format_spec):
         return self.__str__()
-
 
 class GraphGraphPattern(GroupGraphPatternSub):
 

@@ -23,9 +23,9 @@ class SolnModifier:
         self.limit_offset_clause = limit_offset_clause
 
     def __str__(self):
-        gc: str = f"{self.group_clause} " if self.group_clause else ""
-        hc: str = f"{self.having_clause} " if self.having_clause else ""
-        oc: str = f"{self.order_clause} " if self.order_clause else ""
+        gc: str = f"{self.group_clause}\n" if self.group_clause else ""
+        hc: str = f"{self.having_clause}\n" if self.having_clause else ""
+        oc: str = f"{self.order_clause}\n" if self.order_clause else ""
         loc: str = f"{self.limit_offset_clause}" if self.limit_offset_clause else ""
         return f"{gc}{hc}{oc}{loc}".rstrip() + "\n"
     
@@ -59,9 +59,12 @@ class GroupClause:
     def is_empty(self) -> bool:
         return len(self.expressions) + len(self.derived_vars) + len(self.vars) == 0
     
-    def stringified_elements_in_order(self) -> List[Any]:
+    def stringified_elements_in_order(self) -> List[List[str]]:
         all_elements: Dict[str, Any] = self.expressions | self.derived_vars | self.vars
-        return [str(all_elements[uuid]) for uuid in self.order_of_elements]
+        all_in_order: List[str] = [str(all_elements[uuid]) for uuid in self.order_of_elements]
+        chunk_size: int = 5
+        chunks = [all_in_order[x:x + chunk_size] for x in range(0, len(all_in_order), chunk_size)]
+        return chunks
     
     def in_order_exprs(self) -> List[Expression]:
         return [self.expressions[uuid] for uuid in self.order_of_elements if uuid in self.expressions]
@@ -69,7 +72,8 @@ class GroupClause:
     def __str__(self):
         if self.is_empty():
             return ""
-        return f"GROUP BY {' '.join(self.stringified_elements_in_order())}"
+        elements: str = '\n'.join(map(' '.join, self.stringified_elements_in_order()))
+        return f"GROUP BY {elements}"
     
     def __format__(self, format_spec):
         return self.__str__()

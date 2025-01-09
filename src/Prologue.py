@@ -24,6 +24,9 @@ class Prologue:
     def remove_all_prefixes(self) -> None:
         self.prefixes = {}
 
+    def is_empty(self) -> bool:
+        return len(self.prefixes) == 0 and self.base_iri is None
+
     def __format__(self, format_spec):
         return self.__str__()
     

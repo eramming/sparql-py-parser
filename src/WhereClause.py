@@ -9,8 +9,11 @@ class WhereClause:
     def __str__(self):
         where: str = "WHERE " if self.uses_keyword else ""
         if not str(self.ggp).startswith("{"):
-            return f"{where}{{\n\t{self.ggp}\n}}"
-        return f"{where}{self.ggp}"
+            formatted_interior: str = ""
+            for line in str(self.ggp).splitlines(keepends=True):
+                formatted_interior += f"\t{line}"
+            return f"{where}{{\n{formatted_interior}\n}}\n"
+        return f"{where}{self.ggp}\n"
     
     def __format__(self, format_spec):
         return self.__str__()

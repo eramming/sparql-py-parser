@@ -39,7 +39,12 @@ class SelectClause:
             return f"SELECT {distinct}*\n"
         ordered_vars: List[str] = sorted(self.explicit_vars.union(self.derived_vars.keys()))
         output = f"SELECT {distinct}"
+        is_first: bool = True
         for var in ordered_vars:
+            if is_first:
+                is_first = False
+            else:
+                output += "\t"
             if var in self.derived_vars:
                 output += f"({self.derived_vars[var]} AS {var})\n"
             else:

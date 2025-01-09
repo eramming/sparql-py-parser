@@ -19,4 +19,4 @@ class TriplesBlock:
         output: str = ""
         for tss in self.unique_subj_triples:
             output += f"{tss} .\n"
-        return output
+        return output[:len(output) - 1]

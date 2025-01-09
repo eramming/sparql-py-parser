@@ -98,7 +98,109 @@ this parsing library. Features left out include:
 
 <!-- USAGE EXAMPLES -->
 ## Usage
+Using the `Tokenizer` and `QueryParser` classes, you can translate a sparql string into a python model. At this point, the world is your oyster -- you can mess with the model as you like. When finished, simply convert your `Query` class to a string, and write to a file. The example below reads in `ex_query.rq`, adds two GraphGraphPatterns (GRAPH <iri> { }), and writes the result to `ex_query_modified.rq`.
 
+`ex_query.rq`
+```
+prefix ex: <http://www.ex.com/ontologies#>
+
+SELECT DISTINCT 
+    ?person ?pet ?age ?occupation 
+    (CONCAT(?major_breed, " mixed with ", ?minor_breed) AS ?breed)
+WHERE {
+    {
+        SELECT DISTINCT ?person ?pet ?age ?occupation
+        WHERE {
+            ?person a ex:Person ;
+                ex:age ?age ;
+                ex:occupation ?occupation .
+
+            OPTIONAL { ?person ex:hasPet ?pet . }
+        }
+    }
+    ?pet ex:main_breed ?major_breed ;
+        ex:secondary_breed ?minor_breed .
+}
+GROUP BY ?person ?pet ?age ?occupation
+```
+
+`ex_query_modified.rq`
+```
+prefix ex: <http://www.ex.com/ontologies#>
+prefix tst: <http://www.ex.com/test-env#>
+
+SELECT DISTINCT 
+    ?person ?pet ?age ?occupation 
+    (CONCAT(?major_breed, " mixed with ", ?minor_breed) AS ?breed)
+WHERE {
+    {
+        SELECT DISTINCT ?person ?pet ?age ?occupation
+        WHERE {
+            GRAPH tst:TestGraph-1234 {
+                ?person a ex:Person ;
+                    ex:age ?age ;
+                    ex:occupation ?occupation .
+
+                OPTIONAL { ?person ex:hasPet ?pet . }
+            }
+        }
+    }
+    GRAPH tst:TestGraph-1234 {
+        ?pet ex:main_breed ?major_breed ;
+            ex:secondary_breed ?minor_breed .
+    }
+}
+GROUP BY ?person ?pet ?age ?occupation
+```
+
+```python
+from src.QueryParser import QueryParser
+from src.Query import Query
+from src.tokens import Tokenizer
+from src.GroupGraphPattern import GroupGraphPatternSub, GraphGraphPattern
+from src.SubSelect import SubSelect
+import sys
+
+
+sys.setrecursionlimit(10000)  # Our tokenizer recurses quite deep sometimes
+
+def modify_remainder_of_where(ggp_sub: GroupGraphPatternSub, graph_iri: str) -> GraphGraphPattern:
+    graph_pattern: GraphGraphPattern = GraphGraphPattern(graph_iri)
+    graph_pattern.load_from_other_ggp_sub(ggp_sub)
+    return graph_pattern
+
+def modify_sub_select(sub_select: SubSelect, graph_iri: str) -> SubSelect:
+    assert isinstance(sub_select, SubSelect)
+    sub_select_ggp_sub: GroupGraphPatternSub = sub_select.where_clause.ggp
+    graph_pattern: GraphGraphPattern = GraphGraphPattern(graph_iri)
+    graph_pattern.load_from_other_ggp_sub(sub_select_ggp_sub)
+    sub_select.where_clause.ggp = graph_pattern
+    return sub_select
+
+def modify_query(query_str: str) -> str:
+    graph_iri: str = "tst:TestGraph-1234"
+    query: Query = QueryParser().parse(Tokenizer().tokenize(query_str))
+    ggp_sub: GroupGraphPatternSub = query.select_query.where_clause.ggp
+    sub_select: SubSelect = modify_sub_select(ggp_sub.elements_in_order()[0], graph_iri)
+    ggp_sub.remove_by_indx(0)  # Remove sub_select
+
+    graph_pattern: GraphGraphPattern = modify_remainder_of_where(ggp_sub, graph_iri)
+    query.select_query.where_clause.ggp = GroupGraphPatternSub([sub_select, graph_pattern])
+    return str(query)
+
+def main() -> None:
+    filepath: str = "./ex_query.rq"
+    query_str: str = None
+    with open(filepath, 'r') as f:
+        query_str = f.read()
+    new_query: str = modify_query(query_str)
+    filepath = "./ex_query_modified.rq"
+    with open(filepath, 'w') as f:
+        f.write(new_query)
+
+if __name__ == "__main__":
+    main()
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
