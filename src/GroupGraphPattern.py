@@ -55,10 +55,10 @@ class GroupGraphPatternSub:
         return [all_elements[uuid] for uuid in self.order_of_elements]
     
     def load_from_other_ggp_sub(self, ggp_sub: 'GroupGraphPatternSub') -> 'GroupGraphPatternSub':
-        self.triples_blocks: Dict[str, TriplesBlock] = deepcopy(ggp_sub.triples_blocks)
-        self.modifiers: Dict[str, PatternModifier] = deepcopy(ggp_sub.modifiers)
-        self.patterns: Dict[str, GroupGraphPattern] = deepcopy(ggp_sub.patterns)
-        self.order_of_elements: List[str] = deepcopy(ggp_sub.order_of_elements)
+        self.triples_blocks = deepcopy(ggp_sub.triples_blocks)
+        self.modifiers = deepcopy(ggp_sub.modifiers)
+        self.patterns = deepcopy(ggp_sub.patterns)
+        self.order_of_elements = deepcopy(ggp_sub.order_of_elements)
 
     def __str__(self):
         ggp_interior: str = "\n".join([str(ele) for ele in self.elements_in_order()])
